@@ -44,21 +44,10 @@ namespace Causeless3t.UI
             base.OnDestroy();
         }
 
-        protected override void LoadData()
+        protected override void BuildBindings()
         {
             if (_bindInfos.Count == 0) return;
             _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
-        }
-        
-        public override string[] GetKeyList()
-        {
-            List<string> result = new();
-            _bindInfos.ForEach((info) =>
-            {
-                if (info.PropertyType == DropdownProperty.OnValueChanged)
-                    result.Add(info.Key);
-            });
-            return result.ToArray();
         }
 
         private void OnValueChanged(int value)
@@ -155,7 +144,7 @@ namespace Causeless3t.UI
         private void EnsureBindData()
         {
             if (_bindInfoDic == null)
-                LoadData();
+                BuildBindings();
         }
 
         public void InvokeMethod(string key, int param)

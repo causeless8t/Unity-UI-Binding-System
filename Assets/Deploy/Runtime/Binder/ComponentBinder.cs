@@ -17,12 +17,12 @@ namespace Causeless3t.UI
         protected virtual void Awake()
         {
             Target = FindTarget();
+            BuildBindings();
         }
 
         protected virtual void OnEnable()
         {
             Bind();
-            LoadData();
         }
 
         protected virtual void OnDestroy()
@@ -65,9 +65,13 @@ namespace Causeless3t.UI
         /// <summary>
         /// 컴포넌트에 Serialize된 정보를 내부 Dictionary로 옮겨담습니다.
         /// </summary>
-        protected virtual void LoadData() { }
+        protected virtual void BuildBindings() { }
         
-        public virtual string[] GetKeyList() { return null; }
+        protected T GetTarget()
+        {
+            Target ??= FindTarget();
+            return Target;
+        }
 
         public void SetProperty(string key, T value)
         {

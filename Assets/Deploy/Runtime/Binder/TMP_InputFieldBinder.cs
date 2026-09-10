@@ -41,24 +41,10 @@ namespace Causeless3t.UI
         private event Action<TMP_InputField, string> OnSelectAction;
         private event Action<TMP_InputField, string> OnDeselectAction;
 
-        protected override void LoadData()
+        protected override void BuildBindings()
         {
             if (_bindInfos.Count == 0) return;
             _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
-        }
-        
-        public override string[] GetKeyList()
-        {
-            List<string> result = new();
-            _bindInfos.ForEach((info) =>
-            {
-                if (info.PropertyType == TMP_InputFieldProperty.OnValueChanged ||
-                    info.PropertyType == TMP_InputFieldProperty.OnSubmit ||
-                    info.PropertyType == TMP_InputFieldProperty.OnSelect ||
-                    info.PropertyType == TMP_InputFieldProperty.OnDeselect)
-                    result.Add(info.Key);
-            });
-            return result.ToArray();
         }
 
         protected override void OnEnable()
@@ -172,7 +158,7 @@ namespace Causeless3t.UI
         private void EnsureBindData()
         {
             if (_bindInfoDic == null)
-                LoadData();
+                BuildBindings();
         }
         
         TMP_Text IPropertyBinder<TMP_Text>.GetProperty(string key)

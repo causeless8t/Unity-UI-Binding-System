@@ -24,7 +24,7 @@ namespace Causeless3t.UI
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, ButtonProperty> _bindInfoDic;
+        private BindingMap<ButtonProperty> _bindingMap;
         private event Action<Button> OnClickAction;
         
         protected override void OnEnable()
@@ -40,72 +40,54 @@ namespace Causeless3t.UI
             base.OnDestroy();
         }
         
-        protected override void LoadData()
+        protected override void BuildBindings()
         {
-            _bindInfoDic ??= new Dictionary<string, ButtonProperty>();
-            _bindInfoDic.Clear();
+            _bindingMap.Clear();
 
             foreach (var info in _bindInfos)
             {
-                if (string.IsNullOrEmpty(info.Key))
-                    continue;
-
-                if (!_bindInfoDic.TryAdd(info.Key, info.PropertyType))
-                {
-                    Debug.LogError($"Duplicate binding key '{info.Key}' found in {nameof(ButtonBinder)}.", this);
-                }
+                _bindingMap.Add(info.Key, info.PropertyType, this);
             }
-        }
-
-        public override string[] GetKeyList()
-        {
-            List<string> result = new();
-            _bindInfos.ForEach((info) =>
-            {
-                if (info.PropertyType == ButtonProperty.OnClick)
-                    result.Add(info.Key);
-            });
-            return result.ToArray();
         }
 
         public void SetProperty(string key, bool value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Button>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+            
+            var target = GetTarget();
+
+            if (target == null)
+                return;
+
+            switch (property)
             {
-                case ButtonProperty.Enable: Target.interactable = value; break;
+                case ButtonProperty.Enable:
+                    target.interactable = value;
+                    break;
             }
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Button>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+
+            if (target == null)
+                return default;
+
+            return property switch
             {
-                case ButtonProperty.Enable: return Target.interactable;
-            }
-            return default;
+                ButtonProperty.Enable => target.interactable,
+                _ => default
+            };
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                LoadData();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         private void OnClick()
@@ -115,24 +97,26 @@ namespace Causeless3t.UI
 
         public void AddListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case ButtonProperty.OnClick: OnClickAction += action as Action<Button>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != ButtonProperty.OnClick)
+                return;
+
+            if (action is Action<Button> callback)
+                OnClickAction += callback;
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case ButtonProperty.OnClick: OnClickAction -= action as Action<Button>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != ButtonProperty.OnClick)
+                return;
+
+            if (action is Action<Button> callback)
+                OnClickAction -= callback;
         }
     }
 }

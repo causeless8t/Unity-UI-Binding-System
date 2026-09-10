@@ -28,7 +28,7 @@ namespace Causeless3t.UI
         private List<BindInfo> _bindInfos = new();
         private Dictionary<string, ImageProperty> _bindInfoDic; 
 
-        protected override void LoadData()
+        protected override void BuildBindings()
         {
             if (_bindInfos.Count == 0) return;
             _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
@@ -97,7 +97,7 @@ namespace Causeless3t.UI
         private void EnsureBindData()
         {
             if (_bindInfoDic == null)
-                LoadData();
+                BuildBindings();
         }
 
         float IPropertyBinder<float>.GetProperty(string key)
