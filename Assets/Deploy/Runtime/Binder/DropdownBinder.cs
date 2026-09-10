@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -10,7 +8,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(TMP_Dropdown))]
     public sealed class DropdownBinder : ComponentBinder<TMP_Dropdown>, IPropertyBinder<bool>, IPropertyBinder<int>, IPropertyBinder<List<TMP_Dropdown.OptionData>>, ICommandBinder<int>, IEventBinder
     {
-        public enum DropdownProperty
+        public enum BindingType
         {
             Value,
             Enable,
@@ -23,12 +21,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public DropdownProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, DropdownProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
         private event Action<TMP_Dropdown, int> OnValueChangedAction;
 
         protected override void OnEnable()
@@ -46,8 +44,12 @@ namespace Causeless3t.UI
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         private void OnValueChanged(int value)
@@ -57,129 +59,129 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, bool value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case DropdownProperty.Enable: Target.interactable = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Enable)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.interactable = value;
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case DropdownProperty.Enable: return Target.interactable;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return false;
+            
+            var target = GetTarget();
+            if (target == null)
+                return false;
+
+            return property == BindingType.Enable && target.interactable;
         }
         
         public void SetProperty(string key, int value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case DropdownProperty.Value: Target.value = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Value)
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            target.value = value;
         }
 
         int IPropertyBinder<int>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case DropdownProperty.Value: return Target.value;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Value ? target.value : default;
         }
         
         public void SetProperty(string key, List<TMP_Dropdown.OptionData> value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case DropdownProperty.OptionList: Target.options = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.OptionList)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.options = value;
         }
 
         List<TMP_Dropdown.OptionData> IPropertyBinder<List<TMP_Dropdown.OptionData>>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            switch (type)
-            {
-                case DropdownProperty.OptionList: return Target.options;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.OptionList ? target.options : default;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         public void InvokeMethod(string key, int param)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Dropdown>();
-            if (Target.IsUnityNull()) return;
+            if (!_bindingMap.TryGet(key, out var type))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+
             switch (type)
             {
-                case DropdownProperty.SetWithoutNotify: Target.SetValueWithoutNotify(param); break;
+                case BindingType.SetWithoutNotify:
+                    target.SetValueWithoutNotify(param);
+                    break;
             }
         }
 
         public void AddListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case DropdownProperty.OnValueChanged: OnValueChangedAction += action as Action<TMP_Dropdown, int>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.OnValueChanged)
+                return;
+
+            if (action is Action<TMP_Dropdown, int> callback)
+                OnValueChangedAction += callback;
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case DropdownProperty.OnValueChanged: OnValueChangedAction -= action as Action<TMP_Dropdown, int>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.OnValueChanged)
+                return;
+
+            if (action is Action<TMP_Dropdown, int> callback)
+                OnValueChangedAction -= callback;
         }
     }
 }

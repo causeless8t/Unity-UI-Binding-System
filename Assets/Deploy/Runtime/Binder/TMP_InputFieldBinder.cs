@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -11,7 +9,7 @@ namespace Causeless3t.UI
     public sealed class TMPInputFieldBinder : ComponentBinder<TMP_InputField>,
         IPropertyBinder<string>, IPropertyBinder<bool>, IPropertyBinder<float>, IPropertyBinder<TMP_Text>, IPropertyBinder<int>, ICommandBinder<string>, IEventBinder
     {
-        public enum TMP_InputFieldProperty
+        public enum BindingType
         {
             Enable,
             Text,
@@ -30,12 +28,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public TMP_InputFieldProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, TMP_InputFieldProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
         private event Action<TMP_InputField, string> OnValueChangedAction;
         private event Action<TMP_InputField, string> OnSubmitAction;
         private event Action<TMP_InputField, string> OnSelectAction;
@@ -43,8 +41,12 @@ namespace Causeless3t.UI
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         protected override void OnEnable()
@@ -71,151 +73,147 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, string value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.Text: Target.text = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Text)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.text = value;
         }
 
         public void SetProperty(string key, float value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.FontSize: Target.pointSize = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.FontSize)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.pointSize = value;
         }
 
         public void SetProperty(string key, bool value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.Enable: Target.interactable = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Enable)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.interactable = value;
         }
 
         public void SetProperty(string key, TMP_Text value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.TextComponent: Target.textComponent = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.TextComponent)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.textComponent = value;
         }
 
         public void SetProperty(string key, int value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.CharacterLimit: Target.characterLimit = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.CharacterLimit)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.characterLimit = value;
         }
 
         int IPropertyBinder<int>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.CharacterLimit: return Target.characterLimit;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.CharacterLimit ? target.characterLimit : default;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
         
         TMP_Text IPropertyBinder<TMP_Text>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.TextComponent: return Target.textComponent;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.TextComponent ? target.textComponent : default;
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            switch (property)
             {
-                case TMP_InputFieldProperty.IsFocused: return Target.isFocused;
-                case TMP_InputFieldProperty.Enable: return Target.interactable;
+                case BindingType.IsFocused: return target.isFocused;
+                case BindingType.Enable: return target.interactable;
             }
             return default;
         }
 
         float IPropertyBinder<float>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.FontSize: return Target.pointSize;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.FontSize ? target.pointSize : default;
         }
 
         string IPropertyBinder<string>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_InputFieldProperty.Text: return Target.text;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Text ? target.text : default;
         }
         
         private void OnValueChanged(string value)
@@ -240,42 +238,46 @@ namespace Causeless3t.UI
 
         public void InvokeMethod(string key, string param)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_InputField>();
-            if (Target.IsUnityNull()) return;
+            if (!_bindingMap.TryGet(key, out var type))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+
             switch (type)
             {
-                case TMP_InputFieldProperty.SetWithoutNotify: Target.SetTextWithoutNotify(param); break;
+                case BindingType.SetWithoutNotify:
+                    target.SetTextWithoutNotify(param);
+                    break;
             }
         }
 
         public void AddListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            switch (property)
             {
-                case TMP_InputFieldProperty.OnValueChanged: OnValueChangedAction += action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnSubmit: OnSubmitAction += action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnSelect: OnSelectAction += action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnDeselect: OnDeselectAction += action as Action<TMP_InputField, string>; break;
+                case BindingType.OnValueChanged: OnValueChangedAction += action as Action<TMP_InputField, string>; break;
+                case BindingType.OnSubmit: OnSubmitAction += action as Action<TMP_InputField, string>; break;
+                case BindingType.OnSelect: OnSelectAction += action as Action<TMP_InputField, string>; break;
+                case BindingType.OnDeselect: OnDeselectAction += action as Action<TMP_InputField, string>; break;
             }
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+            
+            switch (property)
             {
-                case TMP_InputFieldProperty.OnValueChanged: OnValueChangedAction -= action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnSubmit: OnSubmitAction -= action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnSelect: OnSelectAction -= action as Action<TMP_InputField, string>; break;
-                case TMP_InputFieldProperty.OnDeselect: OnDeselectAction -= action as Action<TMP_InputField, string>; break;
+                case BindingType.OnValueChanged: OnValueChangedAction -= action as Action<TMP_InputField, string>; break;
+                case BindingType.OnSubmit: OnSubmitAction -= action as Action<TMP_InputField, string>; break;
+                case BindingType.OnSelect: OnSelectAction -= action as Action<TMP_InputField, string>; break;
+                case BindingType.OnDeselect: OnDeselectAction -= action as Action<TMP_InputField, string>; break;
             }
         }
     }

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Causeless3t.Core;
 using UnityEngine;
 
 namespace Causeless3t.UI
@@ -9,7 +7,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(LongTapButton))]
     public sealed class LongTapButtonBinder : ComponentBinder<LongTapButton>, IPropertyBinder<bool>, IEventBinder
     {
-        public enum LongTapButtonProperty
+        public enum BindingType
         {
             Enable,
             OnClick,
@@ -21,12 +19,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public LongTapButtonProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, LongTapButtonProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
         private event Action<LongTapButton> OnClickAction;
         private event Action<LongTapButton> OnLongTapAction;
         private event Action<LongTapButton> OnVeryLongTapAction;
@@ -52,48 +50,44 @@ namespace Causeless3t.UI
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
         
         public void SetProperty(string key, bool value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<LongTapButton>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case LongTapButtonProperty.Enable: Target.interactable = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Enable)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.interactable = value;
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<LongTapButton>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case LongTapButtonProperty.Enable: return Target.interactable;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return false;
+            
+            var target = GetTarget();
+            if (target == null)
+                return false;
+
+            return property == BindingType.Enable && target.interactable;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
         
         private void OnClick()
@@ -113,27 +107,27 @@ namespace Causeless3t.UI
 
         public void AddListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            switch (property)
             {
-                case LongTapButtonProperty.OnClick: OnClickAction += action as Action<LongTapButton>; break;
-                case LongTapButtonProperty.OnLongTap: OnLongTapAction += action as Action<LongTapButton>; break;
-                case LongTapButtonProperty.OnVeryLongTap: OnVeryLongTapAction += action as Action<LongTapButton>; break;
+                case BindingType.OnClick: OnClickAction += action as Action<LongTapButton>; break;
+                case BindingType.OnLongTap: OnLongTapAction += action as Action<LongTapButton>; break;
+                case BindingType.OnVeryLongTap: OnVeryLongTapAction += action as Action<LongTapButton>; break;
             }
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            switch (property)
             {
-                case LongTapButtonProperty.OnClick: OnClickAction -= action as Action<LongTapButton>; break;
-                case LongTapButtonProperty.OnLongTap: OnLongTapAction -= action as Action<LongTapButton>; break;
-                case LongTapButtonProperty.OnVeryLongTap: OnVeryLongTapAction -= action as Action<LongTapButton>; break;
+                case BindingType.OnClick: OnClickAction -= action as Action<LongTapButton>; break;
+                case BindingType.OnLongTap: OnLongTapAction -= action as Action<LongTapButton>; break;
+                case BindingType.OnVeryLongTap: OnVeryLongTapAction -= action as Action<LongTapButton>; break;
             }
         }
     }

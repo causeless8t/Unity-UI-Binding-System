@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Causeless3t.UI
@@ -10,7 +8,7 @@ namespace Causeless3t.UI
     public sealed class RectTransformBinder : ComponentBinder<RectTransform>,
         IPropertyBinder<Vector2>, IPropertyBinder<Vector3>, IPropertyBinder<Quaternion>, IPropertyBinder<Rect>
     {
-        public enum RectTransformProperty
+        public enum BindingType
         {
             AnchorPosition,
             Position,
@@ -24,57 +22,67 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public RectTransformProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, RectTransformProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         public void SetProperty(string key, Vector2 value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case RectTransformProperty.Size: Target.sizeDelta = value; break;
-                case RectTransformProperty.AnchorPosition: Target.anchoredPosition = value; break;
+                case BindingType.Size: target.sizeDelta = value; break;
+                case BindingType.AnchorPosition: target.anchoredPosition = value; break;
             }
         }
 
         public void SetProperty(string key, Vector3 value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case RectTransformProperty.Position: Target.position = value; break;
-                case RectTransformProperty.Scale: Target.localScale = value; break;
+                case BindingType.Position: target.position = value; break;
+                case BindingType.Scale: target.localScale = value; break;
             }
         }
 
         public void SetProperty(string key, Quaternion value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case RectTransformProperty.Rotation: Target.rotation = value; break;
+                case BindingType.Rotation: target.rotation = value; break;
             }
         }
 
@@ -85,71 +93,71 @@ namespace Causeless3t.UI
 
         Rect IPropertyBinder<Rect>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case RectTransformProperty.Rect: return Target.rect;
+                case BindingType.Rect: return target.rect;
             }
             return default;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         Quaternion IPropertyBinder<Quaternion>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case RectTransformProperty.Rotation: return Target.rotation;
+                case BindingType.Rotation: return target.rotation;
             }
             return default;
         }
 
         Vector3 IPropertyBinder<Vector3>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case RectTransformProperty.Position: return Target.position;
-                case RectTransformProperty.Scale: return Target.localScale;
+                case BindingType.Position: return target.position;
+                case BindingType.Scale: return target.localScale;
             }
             return default;
         }
 
         Vector2 IPropertyBinder<Vector2>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<RectTransform>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case RectTransformProperty.AnchorPosition: return Target.anchoredPosition;
-                case RectTransformProperty.Size: return Target.sizeDelta;
+                case BindingType.AnchorPosition: return target.anchoredPosition;
+                case BindingType.Size: return target.sizeDelta;
             }
             return default;
         }

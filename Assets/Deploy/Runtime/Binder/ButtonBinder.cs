@@ -1,4 +1,3 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +8,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Button))]
     public sealed class ButtonBinder : ComponentBinder<Button>, IPropertyBinder<bool>, IEventBinder
     {
-        public enum ButtonProperty
+        public enum BindingType
         {
             Enable,
             OnClick
@@ -19,12 +18,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public ButtonProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private BindingMap<ButtonProperty> _bindingMap;
+        private BindingMap<BindingType> _bindingMap;
         private event Action<Button> OnClickAction;
         
         protected override void OnEnable()
@@ -46,7 +45,7 @@ namespace Causeless3t.UI
 
             foreach (var info in _bindInfos)
             {
-                _bindingMap.Add(info.Key, info.PropertyType, this);
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
             }
         }
 
@@ -54,35 +53,27 @@ namespace Causeless3t.UI
         {
             if (!_bindingMap.TryGet(key, out var property))
                 return;
+
+            if (property != BindingType.Enable)
+                return;
             
             var target = GetTarget();
-
             if (target == null)
                 return;
 
-            switch (property)
-            {
-                case ButtonProperty.Enable:
-                    target.interactable = value;
-                    break;
-            }
+            target.interactable = value;
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (!_bindingMap.TryGet(key, out var property))
-                return default;
-
+                return false;
+            
             var target = GetTarget();
-
             if (target == null)
-                return default;
+                return false;
 
-            return property switch
-            {
-                ButtonProperty.Enable => target.interactable,
-                _ => default
-            };
+            return property == BindingType.Enable && target.interactable;
         }
 
         public override bool HasKey(string key)
@@ -100,7 +91,7 @@ namespace Causeless3t.UI
             if (!_bindingMap.TryGet(key, out var property))
                 return;
 
-            if (property != ButtonProperty.OnClick)
+            if (property != BindingType.OnClick)
                 return;
 
             if (action is Action<Button> callback)
@@ -112,7 +103,7 @@ namespace Causeless3t.UI
             if (!_bindingMap.TryGet(key, out var property))
                 return;
 
-            if (property != ButtonProperty.OnClick)
+            if (property != BindingType.OnClick)
                 return;
 
             if (action is Action<Button> callback)

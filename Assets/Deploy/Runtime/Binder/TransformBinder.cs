@@ -1,14 +1,12 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Causeless3t.UI
 {
     public sealed class TransformBinder : ComponentBinder<Transform>, IPropertyBinder<Vector3>, IPropertyBinder<Quaternion>
     {
-        public enum TransformProperty
+        public enum BindingType
         {
             Position,
             Rotation,
@@ -19,12 +17,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public TransformProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, TransformProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
 
         protected override void Awake()
         {
@@ -34,75 +32,75 @@ namespace Causeless3t.UI
         
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         public void SetProperty(string key, Vector3 value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= transform;
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            switch (property)
             {
-                case TransformProperty.Position: Target.position = value; break;
-                case TransformProperty.Scale: Target.localScale = value; break;
+                case BindingType.Position: target.position = value; break;
+                case BindingType.Scale: target.localScale = value; break;
             }
         }
 
         public void SetProperty(string key, Quaternion value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= transform;
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TransformProperty.Rotation: Target.rotation = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Rotation)
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            target.rotation = value;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         Quaternion IPropertyBinder<Quaternion>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= transform;
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TransformProperty.Rotation: return Target.rotation;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Rotation ? target.rotation : default;
         }
 
         Vector3 IPropertyBinder<Vector3>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= transform;
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            switch (property)
             {
-                case TransformProperty.Position: return Target.position;
-                case TransformProperty.Scale: return Target.localScale;
+                case BindingType.Position: return Target.position;
+                case BindingType.Scale: return Target.localScale;
             }
             return default;
         }

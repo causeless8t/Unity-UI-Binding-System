@@ -69,8 +69,20 @@ namespace Causeless3t.UI
         
         protected T GetTarget()
         {
-            Target ??= FindTarget();
+            if (IsTargetNull())
+                Target = FindTarget();
             return Target;
+        }
+        
+        private bool IsTargetNull()
+        {
+            if (Target == null)
+                return true;
+
+            if (Target is Object unityObject)
+                return unityObject == null;
+
+            return false;
         }
 
         public void SetProperty(string key, T value)

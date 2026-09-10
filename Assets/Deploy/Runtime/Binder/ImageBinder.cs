@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +8,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Image))]
     public sealed class ImageBinder : ComponentBinder<Image>, IPropertyBinder<Sprite>, IPropertyBinder<float>, IPropertyBinder<Color>
     {
-        public enum ImageProperty
+        public enum BindingType
         {
             Sprite,
             FillAmount,
@@ -21,111 +19,107 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public ImageProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, ImageProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         public void SetProperty(string key, Sprite value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case ImageProperty.Sprite: Target.sprite = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Sprite)
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            target.sprite = value;
         }
 
         public void SetProperty(string key, float value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case ImageProperty.FillAmount: Target.fillAmount = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.FillAmount)
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            target.fillAmount = value;
         }
 
         public void SetProperty(string key, Color value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case ImageProperty.Color: Target.color = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Color)
+                return;
+            
+            var target = GetTarget();
+            if (target == null)
+                return;
+
+            target.color = value;
         }
 
         Color IPropertyBinder<Color>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case ImageProperty.Color: return Target.color;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            return property == BindingType.Color ? target.color : default;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         float IPropertyBinder<float>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case ImageProperty.FillAmount: return Target.fillAmount;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            return property == BindingType.FillAmount ? target.fillAmount : default;
         }
 
         Sprite IPropertyBinder<Sprite>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Image>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case ImageProperty.Sprite: return Target.sprite;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Sprite ? target.sprite : default;
         }
     }
 }

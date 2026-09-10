@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +8,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Slider))]
     public sealed class SliderBinder : ComponentBinder<Slider>, IPropertyBinder<float>, IPropertyBinder<bool>, IEventBinder
     {
-        public enum SliderProperty
+        public enum BindingType
         {
             Value,
             SetWithoutNotify,
@@ -22,12 +20,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public SliderProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, SliderProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
         private event Action<Slider, float> OnValueChangedAction;
 
         protected override void OnEnable()
@@ -45,8 +43,12 @@ namespace Causeless3t.UI
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         private void OnValueChanged(float value)
@@ -56,92 +58,94 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, float value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Slider>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case SliderProperty.Value: Target.value = value; break;
-                case SliderProperty.SetWithoutNotify: Target.SetValueWithoutNotify(value); break;
+                case BindingType.Value: target.value = value; break;
+                case BindingType.SetWithoutNotify: target.SetValueWithoutNotify(value); break;
             }
         }
 
         public void SetProperty(string key, bool value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<Slider>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case SliderProperty.Enable: Target.interactable = value; break;
+                case BindingType.Enable: target.interactable = value; break;
             }
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Slider>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case SliderProperty.Enable: return Target.interactable;
+                case BindingType.Enable: return target.interactable;
             }
             return default;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         float IPropertyBinder<float>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<Slider>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case SliderProperty.Value: return Target.value;
+                case BindingType.Value: return target.value;
             }
             return default;
         }
 
         public void AddListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case SliderProperty.OnValueChanged: OnValueChangedAction += action as Action<Slider, float>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.OnValueChanged)
+                return;
+
+            if (action is Action<Slider, float> callback)
+                OnValueChangedAction += callback;
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            switch (type)
-            {
-                case SliderProperty.OnValueChanged: OnValueChangedAction -= action as Action<Slider, float>; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.OnValueChanged)
+                return;
+
+            if (action is Action<Slider, float> callback)
+                OnValueChangedAction -= callback;
         }
     }
 }

@@ -1,14 +1,12 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Causeless3t.UI
 {
     public sealed class GameObjectBinder : ComponentBinder<GameObject>, IPropertyBinder<bool>, ICommandBinder<bool>
     {
-        public enum GameObjectProperty
+        public enum BindingType
         {
             IsActive,
             SetActive
@@ -18,12 +16,12 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public GameObjectProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, GameObjectProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
 
         protected override void Awake()
         {
@@ -33,8 +31,12 @@ namespace Causeless3t.UI
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
         
         public void SetProperty(string key, bool value)
@@ -44,41 +46,31 @@ namespace Causeless3t.UI
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= gameObject;
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            { 
-                case GameObjectProperty.IsActive: return Target.activeSelf;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return false;
+
+            return property == BindingType.IsActive && GetTarget().activeSelf;
         }
         
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         public void InvokeMethod(string key, bool param)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= gameObject;
-            if (Target.IsUnityNull()) return;
+            if (!_bindingMap.TryGet(key, out var type))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+
             switch (type)
             {
-                case GameObjectProperty.SetActive: Target.SetActive(param); break;
+                case BindingType.SetActive:
+                    target.SetActive(param);
+                    break;
             }
         }
     }

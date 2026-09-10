@@ -1,7 +1,5 @@
-using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -11,7 +9,7 @@ namespace Causeless3t.UI
     public sealed class TMPTextBinder : ComponentBinder<TMP_Text>,
         IPropertyBinder<string>, IPropertyBinder<Color>, IPropertyBinder<float>
     {
-        public enum TMP_TextProperty
+        public enum BindingType
         {
             Text,
             Color,
@@ -23,113 +21,113 @@ namespace Causeless3t.UI
         public struct BindInfo
         {
             public string Key;
-            public TMP_TextProperty PropertyType;
+            public BindingType bindingTypeType;
         }
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private Dictionary<string, TMP_TextProperty> _bindInfoDic; 
+        private BindingMap<BindingType> _bindingMap; 
 
         protected override void BuildBindings()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindingMap.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                _bindingMap.Add(info.Key, info.bindingTypeType, this);
+            }
         }
 
         public void SetProperty(string key, string value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_TextProperty.Text: Target.SetText(value); break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Text)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.text = value;
         }
 
         public void SetProperty(string key, float value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            switch (property)
             {
-                case TMP_TextProperty.Alpha: Target.alpha = value; break;
-                case TMP_TextProperty.Size: Target.fontSize = value; break;
+                case BindingType.Alpha: target.alpha = value; break;
+                case BindingType.Size: target.fontSize = value; break;
             }
         }
 
         public void SetProperty(string key, Color value)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return;
-            switch (type)
-            {
-                case TMP_TextProperty.Color: Target.color = value; break;
-            }
+            if (!_bindingMap.TryGet(key, out var property))
+                return;
+
+            if (property != BindingType.Color)
+                return;
+
+            var target = GetTarget();
+            if (target == null)
+                return;
+            
+            target.color = value;
         }
 
         public override bool HasKey(string key)
         {
-            if (base.HasKey(key)) return true;
-            EnsureBindData();
-            return _bindInfoDic.ContainsKey(key);
-        }
-        
-        private void EnsureBindData()
-        {
-            if (_bindInfoDic == null)
-                BuildBindings();
+            return base.HasKey(key) || _bindingMap.Contains(key);
         }
 
         Color IPropertyBinder<Color>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_TextProperty.Color: return Target.color;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Color ? target.color : default;
         }
 
         float IPropertyBinder<float>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+            
+            switch (property)
             {
-                case TMP_TextProperty.Alpha: return Target.alpha;
-                case TMP_TextProperty.Size: return Target.fontSize;
+                case BindingType.Alpha: return target.alpha;
+                case BindingType.Size: return target.fontSize;
             }
             return default;
         }
 
         string IPropertyBinder<string>.GetProperty(string key)
         {
-            EnsureBindData();
-            if (_bindInfoDic == null) return default;
-            if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
-            Target ??= GetComponent<TMP_Text>();
-            if (Target.IsUnityNull()) return default;
-            switch (type)
-            {
-                case TMP_TextProperty.Text: return Target.text;
-            }
-            return default;
+            if (!_bindingMap.TryGet(key, out var property))
+                return default;
+            
+            var target = GetTarget();
+            if (target == null)
+                return default;
+
+            return property == BindingType.Text ? target.text : default;
         }
     }
 }
