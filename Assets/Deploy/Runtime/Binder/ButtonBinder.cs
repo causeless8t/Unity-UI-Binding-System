@@ -1,7 +1,6 @@
 using Causeless3t.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,22 +9,22 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Button))]
     public sealed class ButtonBinder : DataBinder<Button>, IDataBinder<bool>, IUIEventBinder
     {
-        public enum eButtonProperty
+        public enum ButtonProperty
         {
             Enable,
             OnClick
         }
 
         [Serializable]
-        public struct BindInfoButton
+        public struct BindInfo
         {
             public string Key;
-            public eButtonProperty PropertyType;
+            public ButtonProperty PropertyType;
         }
 
         [SerializeField]
-        private List<BindInfoButton> _bindInfos = new();
-        private Dictionary<string, eButtonProperty> _bindInfoDic;
+        private List<BindInfo> _bindInfos = new();
+        private Dictionary<string, ButtonProperty> _bindInfoDic;
         private event Action<Button> OnClickAction;
         
         protected override void OnEnable()
@@ -43,8 +42,19 @@ namespace Causeless3t.UI
         
         protected override void LoadData()
         {
-            if (_bindInfos.Count == 0) return;
-            _bindInfoDic = _bindInfos.ToDictionary(info => info.Key, info => info.PropertyType);
+            _bindInfoDic ??= new Dictionary<string, ButtonProperty>();
+            _bindInfoDic.Clear();
+
+            foreach (var info in _bindInfos)
+            {
+                if (string.IsNullOrEmpty(info.Key))
+                    continue;
+
+                if (!_bindInfoDic.TryAdd(info.Key, info.PropertyType))
+                {
+                    Debug.LogError($"Duplicate binding key '{info.Key}' found in {nameof(ButtonBinder)}.", this);
+                }
+            }
         }
 
         public override string[] GetKeyList()
@@ -52,7 +62,7 @@ namespace Causeless3t.UI
             List<string> result = new();
             _bindInfos.ForEach((info) =>
             {
-                if (info.PropertyType == eButtonProperty.OnClick)
+                if (info.PropertyType == ButtonProperty.OnClick)
                     result.Add(info.Key);
             });
             return result.ToArray();
@@ -60,34 +70,43 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, bool value)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Button>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eButtonProperty.Enable: Target.interactable = value; break;
+                case ButtonProperty.Enable: Target.interactable = value; break;
             }
         }
 
         bool IDataBinder<bool>.GetProperty(string key)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= GetComponent<Button>();
             if (Target.IsUnityNull()) return default;
             switch (type)
             {
-                case eButtonProperty.Enable: return Target.interactable;
+                case ButtonProperty.Enable: return Target.interactable;
             }
             return default;
         }
 
-        public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
+        public override bool HasKey(string key)
+        {
+            if (base.HasKey(key)) return true;
+            EnsureBindData();
+            return _bindInfoDic.ContainsKey(key);
+        }
+        
+        private void EnsureBindData()
+        {
+            if (_bindInfoDic == null)
+                LoadData();
+        }
 
         private void OnClick()
         {
@@ -96,25 +115,23 @@ namespace Causeless3t.UI
 
         public void AddListener(string key, Delegate action)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             switch (type)
             {
-                case eButtonProperty.OnClick: OnClickAction += action as Action<Button>; break;
+                case ButtonProperty.OnClick: OnClickAction += action as Action<Button>; break;
             }
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic.TryGetValue(key, out var type)) return;
             switch (type)
             {
-                case eButtonProperty.OnClick: OnClickAction -= action as Action<Button>; break;
+                case ButtonProperty.OnClick: OnClickAction -= action as Action<Button>; break;
             }
         }
     }

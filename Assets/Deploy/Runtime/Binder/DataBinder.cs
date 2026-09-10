@@ -54,6 +54,13 @@ namespace Causeless3t.UI
             _binderManager.UnregisterBinder(this);
             _binderManager = null;
         }
+        
+        protected bool IsGetterKey(string key)
+        {
+            return !string.IsNullOrEmpty(getterKey) && getterKey == key;
+        }
+
+        public virtual bool HasKey(string key) => IsGetterKey(key);
 
         /// <summary>
         /// 컴포넌트에 Serialize된 정보를 내부 Dictionary로 옮겨담습니다.
@@ -90,8 +97,5 @@ namespace Causeless3t.UI
 
             return GetComponent<T>();
         }
-
-
-        public virtual bool HasKey(string key) => !string.IsNullOrEmpty(getterKey) && getterKey.Equals(key);
     }
 }
