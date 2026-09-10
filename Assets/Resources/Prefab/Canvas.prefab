@@ -154,6 +154,10 @@ PrefabInstance:
       propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5632791415651244199, guid: 7d1e55c969b36464db99ef9f3b6926cb, type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
     - target: {fileID: 5857143216964468420, guid: 7d1e55c969b36464db99ef9f3b6926cb, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -294,6 +298,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8148310738926577139, guid: 7d1e55c969b36464db99ef9f3b6926cb, type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7109706604577007002, guid: 7d1e55c969b36464db99ef9f3b6926cb, type: 3}
@@ -329,4 +337,4 @@ MonoBehaviour:
   getterKey: 
   _bindInfos:
   - Key: GoToLastIndexButton
-    PropertyType: 1
+    bindingTypeType: 1

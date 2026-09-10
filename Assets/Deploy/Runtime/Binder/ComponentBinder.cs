@@ -41,14 +41,12 @@ namespace Causeless3t.UI
         {
             var manager = GetComponentInParent<IBinderManager>(true);
 
-            // 이미 동일 Manager에 등록되어 있음
-            if (ReferenceEquals(_binderManager, manager))
-                return;
-
-            // 부모가 변경된 경우 기존 Manager에서 제거
-            _binderManager?.UnregisterBinder(this);
-
-            _binderManager = manager;
+            if (!ReferenceEquals(_binderManager, manager))
+            {
+                _binderManager?.UnregisterBinder(this);
+                _binderManager = manager;
+            }
+            
             _binderManager?.RegisterBinder(this);
         }
         

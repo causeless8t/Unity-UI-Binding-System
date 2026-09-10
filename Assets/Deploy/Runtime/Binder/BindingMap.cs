@@ -17,7 +17,7 @@ namespace Causeless3t.UI
             if (string.IsNullOrEmpty(key))
                 return false;
 
-            if (_bindings.TryAdd(key, property))
+            if (!_bindings.TryAdd(key, property))
             {
                 Debug.LogError($"Duplicate binding key '{key}'.", context);
 
