@@ -8,22 +8,22 @@ namespace Causeless3t.UI
 {
     public sealed class GameObjectBinder : ComponentBinder<GameObject>, IPropertyBinder<bool>, ICommandBinder<bool>
     {
-        public enum eGameObjectProperty
+        public enum GameObjectProperty
         {
             IsActive,
             SetActive
         }
 
         [Serializable]
-        public struct BindInfoGameObject
+        public struct BindInfo
         {
             public string Key;
-            public eGameObjectProperty PropertyType;
+            public GameObjectProperty PropertyType;
         }
 
         [SerializeField]
-        private List<BindInfoGameObject> _bindInfos = new();
-        private Dictionary<string, eGameObjectProperty> _bindInfoDic; 
+        private List<BindInfo> _bindInfos = new();
+        private Dictionary<string, GameObjectProperty> _bindInfoDic; 
 
         protected override void Awake()
         {
@@ -44,32 +44,41 @@ namespace Causeless3t.UI
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= gameObject;
             if (Target.IsUnityNull()) return default;
             switch (type)
             { 
-                case eGameObjectProperty.IsActive: return Target.activeSelf;
+                case GameObjectProperty.IsActive: return Target.activeSelf;
             }
             return default;
         }
         
-        public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
-
-        public void InvokeMethod(string key, bool param)
+        public override bool HasKey(string key)
+        {
+            if (base.HasKey(key)) return true;
+            EnsureBindData();
+            return _bindInfoDic.ContainsKey(key);
+        }
+        
+        private void EnsureBindData()
         {
             if (_bindInfoDic == null)
                 LoadData();
+        }
+
+        public void InvokeMethod(string key, bool param)
+        {
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= gameObject;
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eGameObjectProperty.SetActive: Target.SetActive(param); break;
+                case GameObjectProperty.SetActive: Target.SetActive(param); break;
             }
         }
     }

@@ -10,7 +10,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Toggle))]
     public sealed class ToggleBinder : ComponentBinder<Toggle>, IPropertyBinder<bool>, ICommandBinder<bool>, IEventBinder
     {
-        public enum eToggleProperty
+        public enum ToggleProperty
         {
             IsOn,
             Enable,
@@ -19,15 +19,15 @@ namespace Causeless3t.UI
         }
 
         [Serializable]
-        public struct BindInfoSlider
+        public struct BindInfo
         {
             public string Key;
-            public eToggleProperty PropertyType;
+            public ToggleProperty PropertyType;
         }
 
         [SerializeField]
-        private List<BindInfoSlider> _bindInfos = new();
-        private Dictionary<string, eToggleProperty> _bindInfoDic; 
+        private List<BindInfo> _bindInfos = new();
+        private Dictionary<string, ToggleProperty> _bindInfoDic; 
         private event Action<Toggle, bool> OnValueChangedAction;
 
         protected override void OnEnable()
@@ -54,7 +54,7 @@ namespace Causeless3t.UI
             List<string> result = new();
             _bindInfos.ForEach((info) =>
             {
-                if (info.PropertyType == eToggleProperty.OnValueChanged)
+                if (info.PropertyType == ToggleProperty.OnValueChanged)
                     result.Add(info.Key);
             });
             return result.ToArray();
@@ -67,72 +67,78 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, bool value)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Toggle>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eToggleProperty.Enable: Target.interactable = value; break;
-                case eToggleProperty.IsOn: Target.isOn = value; break;
+                case ToggleProperty.Enable: Target.interactable = value; break;
+                case ToggleProperty.IsOn: Target.isOn = value; break;
             }
         }
 
         bool IPropertyBinder<bool>.GetProperty(string key)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= GetComponent<Toggle>();
             if (Target.IsUnityNull()) return default;
             switch (type)
             {
-                case eToggleProperty.Enable: return Target.interactable;
-                case eToggleProperty.IsOn: return Target.isOn;
+                case ToggleProperty.Enable: return Target.interactable;
+                case ToggleProperty.IsOn: return Target.isOn;
             }
             return default;
         }
 
-        public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
-
-        public void InvokeMethod(string key, bool param)
+        public override bool HasKey(string key)
+        {
+            if (base.HasKey(key)) return true;
+            EnsureBindData();
+            return _bindInfoDic.ContainsKey(key);
+        }
+        
+        private void EnsureBindData()
         {
             if (_bindInfoDic == null)
                 LoadData();
+        }
+
+        public void InvokeMethod(string key, bool param)
+        {
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Toggle>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eToggleProperty.SetWithoutNotify: Target.SetIsOnWithoutNotify(param); break;
+                case ToggleProperty.SetWithoutNotify: Target.SetIsOnWithoutNotify(param); break;
             }
         }
 
         public void AddListener(string key, Delegate action)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             switch (type)
             {
-                case eToggleProperty.OnValueChanged: OnValueChangedAction += action as Action<Toggle, bool>; break;
+                case ToggleProperty.OnValueChanged: OnValueChangedAction += action as Action<Toggle, bool>; break;
             }
         }
 
         public void RemoveListener(string key, Delegate action)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             switch (type)
             {
-                case eToggleProperty.OnValueChanged: OnValueChangedAction -= action as Action<Toggle, bool>; break;
+                case ToggleProperty.OnValueChanged: OnValueChangedAction -= action as Action<Toggle, bool>; break;
             }
         }
     }

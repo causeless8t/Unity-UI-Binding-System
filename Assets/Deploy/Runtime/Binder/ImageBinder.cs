@@ -10,7 +10,7 @@ namespace Causeless3t.UI
     [RequireComponent(typeof(Image))]
     public sealed class ImageBinder : ComponentBinder<Image>, IPropertyBinder<Sprite>, IPropertyBinder<float>, IPropertyBinder<Color>
     {
-        public enum eImageProperty
+        public enum ImageProperty
         {
             Sprite,
             FillAmount,
@@ -18,15 +18,15 @@ namespace Causeless3t.UI
         }
 
         [Serializable]
-        public struct ImageProperty
+        public struct BindInfo
         {
             public string Key;
-            public eImageProperty PropertyType;
+            public ImageProperty PropertyType;
         }
 
         [SerializeField]
-        private List<ImageProperty> _bindInfos = new();
-        private Dictionary<string, eImageProperty> _bindInfoDic; 
+        private List<BindInfo> _bindInfos = new();
+        private Dictionary<string, ImageProperty> _bindInfoDic; 
 
         protected override void LoadData()
         {
@@ -36,89 +36,94 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, Sprite value)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eImageProperty.Sprite: Target.sprite = value; break;
+                case ImageProperty.Sprite: Target.sprite = value; break;
             }
         }
 
         public void SetProperty(string key, float value)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eImageProperty.FillAmount: Target.fillAmount = value; break;
+                case ImageProperty.FillAmount: Target.fillAmount = value; break;
             }
         }
 
         public void SetProperty(string key, Color value)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eImageProperty.Color: Target.color = value; break;
+                case ImageProperty.Color: Target.color = value; break;
             }
         }
 
         Color IPropertyBinder<Color>.GetProperty(string key)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return default;
             switch (type)
             {
-                case eImageProperty.Color: return Target.color;
+                case ImageProperty.Color: return Target.color;
             }
             return default;
         }
 
-        public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
-
-        float IPropertyBinder<float>.GetProperty(string key)
+        public override bool HasKey(string key)
+        {
+            if (base.HasKey(key)) return true;
+            EnsureBindData();
+            return _bindInfoDic.ContainsKey(key);
+        }
+        
+        private void EnsureBindData()
         {
             if (_bindInfoDic == null)
                 LoadData();
+        }
+
+        float IPropertyBinder<float>.GetProperty(string key)
+        {
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return default;
             switch (type)
             {
-                case eImageProperty.FillAmount: return Target.fillAmount;
+                case ImageProperty.FillAmount: return Target.fillAmount;
             }
             return default;
         }
 
         Sprite IPropertyBinder<Sprite>.GetProperty(string key)
         {
-            if (_bindInfoDic == null)
-                LoadData();
+            EnsureBindData();
             if (_bindInfoDic == null) return default;
             if (!_bindInfoDic!.TryGetValue(key, out var type)) return default;
             Target ??= GetComponent<Image>();
             if (Target.IsUnityNull()) return default;
             switch (type)
             {
-                case eImageProperty.Sprite: return Target.sprite;
+                case ImageProperty.Sprite: return Target.sprite;
             }
             return default;
         }
