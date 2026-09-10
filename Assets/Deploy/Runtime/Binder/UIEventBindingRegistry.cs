@@ -25,62 +25,100 @@ namespace Causeless3t.UI
     
     internal static class UIEventBindingRegistry
     {
-        private static readonly Dictionary<Type, List<UIEventBindingInfo>> _bindings = new();
-
-        private static bool _initialized;
+        private static readonly Dictionary<Type, IReadOnlyList<UIEventBindingInfo>> _bindings = new();
 
         public static IReadOnlyList<UIEventBindingInfo> GetBindings(Type type)
         {
-            EnsureInitialized();
+            if (type == null)
+                return Array.Empty<UIEventBindingInfo>();
 
-            return _bindings.TryGetValue(type, out var bindings)
-                ? bindings
-                : Array.Empty<UIEventBindingInfo>();
+            if (_bindings.TryGetValue(type, out var bindings))
+                return bindings;
+
+            bindings = CreateBindings(type);
+            _bindings.Add(type, bindings);
+
+            return bindings;
         }
 
-        private static void EnsureInitialized()
+        private static IReadOnlyList<UIEventBindingInfo> CreateBindings(Type type)
         {
-            if (_initialized)
-                return;
+            var bindings = new List<UIEventBindingInfo>();
 
-            _initialized = true;
+            var methods = type.GetMethods(
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.Instance);
 
-            Initialize();
-        }
-
-        private static void Initialize()
-        {
-            // 현재 InitUIEventBindInfo 내용 이동
-            var types = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly => assembly.GetTypes());
-            foreach (var type in types)
+            foreach (var method in methods)
             {
-                var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Where(x => x.GetCustomAttribute(typeof(UIRegisterAttribute), true) != null);
-                foreach (var method in methods)
+                var attribute = method.GetCustomAttribute<UIRegisterAttribute>(true);
+
+                if (attribute == null)
+                    continue;
+
+                if (attribute.DelegateType == null)
                 {
-                    var attribute = method.GetCustomAttribute<UIRegisterAttribute>();
-                    if (attribute.DelegateType == null)
-                    {
-                        Debug.LogError("AutoRegistUIEvents Failed. actionType is error");
-                        return;
-                    }
-            
-                    var key = attribute.Key;
-                    if (string.IsNullOrEmpty(key))
-                    {
-                        key = method.Name;
-                    }
-            
-                    if (!_bindings.TryGetValue(type, out var list))
-                    {
-                        list = new();
-                        _bindings.Add(type, list);
-                    }
-                    
-                    list.Add(new(key, attribute.DelegateType, method));
+                    Debug.LogError(
+                        $"[{nameof(UIRegisterAttribute)}] DelegateType is null: " +
+                        $"{type.FullName}.{method.Name}");
+
+                    continue;
+                }
+
+                if (!IsCompatible(method, attribute.DelegateType))
+                {
+                    Debug.LogError(
+                        $"[{nameof(UIRegisterAttribute)}] Delegate signature mismatch: " +
+                        $"{type.FullName}.{method.Name} / " +
+                        $"{attribute.DelegateType.FullName}");
+
+                    continue;
+                }
+
+                var key = string.IsNullOrEmpty(attribute.Key)
+                    ? method.Name
+                    : attribute.Key;
+
+                bindings.Add(new UIEventBindingInfo(key, attribute.DelegateType, method));
+            }
+
+            return bindings;
+        }
+
+        private static bool IsCompatible(MethodInfo method, Type delegateType)
+        {
+            if (!typeof(Delegate).IsAssignableFrom(delegateType))
+                return false;
+
+            var invokeMethod = delegateType.GetMethod("Invoke");
+
+            if (invokeMethod == null)
+                return false;
+
+            if (invokeMethod.ReturnType != method.ReturnType)
+                return false;
+
+            var delegateParameters = invokeMethod.GetParameters();
+            var methodParameters = method.GetParameters();
+
+            if (delegateParameters.Length != methodParameters.Length)
+                return false;
+
+            for (var i = 0; i < delegateParameters.Length; i++)
+            {
+                if (delegateParameters[i].ParameterType != methodParameters[i].ParameterType)
+                {
+                    return false;
                 }
             }
+
+            return true;
+        }
+
+        public static void Clear()
+        {
+            _bindings.Clear();
         }
     }
 }

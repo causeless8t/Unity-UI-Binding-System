@@ -1,11 +1,7 @@
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Causeless3t.UI
 {
@@ -36,11 +32,11 @@ namespace Causeless3t.UI
         /// <summary>
         /// Ui가 오픈된 후 불리는 Event
         /// </summary>
-        public event Action<BaseUI> OnOpenEvent;
+        public event Action<BaseUI> Opened;
         /// <summary>
         /// Ui가 닫히기 직전 불리는 Event
         /// </summary>
-        public event Action<BaseUI> OnCloseEvent;
+        public event Action<BaseUI> Closing;
 
         #region member method
 
@@ -61,35 +57,36 @@ namespace Causeless3t.UI
 
         protected virtual void OnDestroy()
         {
-            UnRegisterUIEvents();
             _binderRegistry.Clear();
         }
         
         
         public virtual void Open()
         {
-            OnOpenEvent?.Invoke(this);
-            OnOpenEvent = null;
-            OpeningProcess().Forget();
-        }
-
-        protected virtual async UniTask OpeningProcess()
-        {
             gameObject.SetActive(true);
-            await UniTask.CompletedTask;
+
+            OnOpened();
+            
+            Opened?.Invoke(this);
+            Opened = null;
+        }
+        
+        protected virtual void OnOpened()
+        {
         }
 
         public virtual void Close()
         {
-            OnCloseEvent?.Invoke(this);
-            OnCloseEvent = null;
-            ClosingProcess().Forget();
+            OnClosing();
+            
+            Closing?.Invoke(this);
+            Closing = null;
+            
+            gameObject.SetActive(false);
         }
         
-        protected virtual async UniTask ClosingProcess()
+        protected virtual void OnClosing()
         {
-            gameObject.SetActive(false);
-            await UniTask.CompletedTask;
         }
 
         #endregion
