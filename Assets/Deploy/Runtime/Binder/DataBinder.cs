@@ -12,29 +12,47 @@ namespace Causeless3t.UI
         /// </summary>
         protected T Target;
         
-        public void Bind()
-        {
-            var parents = transform.GetComponentsInParent<IBinderManager>(true);
-            foreach (IBinderManager parent in parents)
-            {
-                if (parent == null) continue;
-                parent.RegisterBinder(this); 
-            }
-        }
+        private IBinderManager _binderManager;
 
         protected virtual void Awake()
         {
-            Target = GetComponent<T>();
+            Target = FindTarget();
         }
 
         protected virtual void OnEnable()
         {
+            Bind();
             LoadData();
         }
 
         protected virtual void OnDestroy()
         {
+            Unbind();
             Target = null;
+        }
+        
+        public void Bind()
+        {
+            var manager = GetComponentInParent<IBinderManager>(true);
+
+            // 이미 동일 Manager에 등록되어 있음
+            if (ReferenceEquals(_binderManager, manager))
+                return;
+
+            // 부모가 변경된 경우 기존 Manager에서 제거
+            _binderManager?.UnregisterBinder(this);
+
+            _binderManager = manager;
+            _binderManager?.RegisterBinder(this);
+        }
+        
+        private void Unbind()
+        {
+            if (_binderManager == null)
+                return;
+
+            _binderManager.UnregisterBinder(this);
+            _binderManager = null;
         }
 
         /// <summary>
@@ -46,7 +64,7 @@ namespace Causeless3t.UI
 
         public void SetProperty(string key, T value)
         {
-            // Only Getter
+            // Base DataBinder는 기본 컴포넌트 Getter 용도로만 사용
         }
 
         /// <summary>
@@ -58,18 +76,22 @@ namespace Causeless3t.UI
         {
             if (string.IsNullOrEmpty(getterKey)) return default;
             if (!getterKey.Equals(key)) return default;
-            if (Target == null)
-            {
-                if (typeof(T) == typeof(GameObject))
-                    Target = gameObject as T;
-                else if (typeof(T) == typeof(Transform))
-                    Target = transform as T;
-                else
-                    Target ??= GetComponent<T>();
-            }
+            Target ??= FindTarget();
             return Target;
         }
+        
+        protected virtual T FindTarget()
+        {
+            if (typeof(T) == typeof(GameObject))
+                return gameObject as T;
 
-        public virtual bool HasKey(string key) => getterKey.Equals(key);
+            if (typeof(T) == typeof(Transform))
+                return transform as T;
+
+            return GetComponent<T>();
+        }
+
+
+        public virtual bool HasKey(string key) => !string.IsNullOrEmpty(getterKey) && getterKey.Equals(key);
     }
 }
