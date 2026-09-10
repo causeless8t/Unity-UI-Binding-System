@@ -23,10 +23,6 @@ namespace Causeless3t.UI
     public class BaseUI : MonoBehaviour, IBinderManager
     {
         private readonly BinderRegistry _binderRegistry = new();
-        // protected static readonly Dictionary<Type, List<(string, Type, MethodInfo)>> UIEventBindInfo = new();
-        // private static bool _isInitializeBindInfo;
-        // protected readonly HashSet<IBinder> _binders = new();
-        // protected readonly Dictionary<string, IBinder> _cachedBinders = new();
 
         public bool IsInitializedBinder { get; private set; }
 
@@ -50,11 +46,6 @@ namespace Causeless3t.UI
 
         protected virtual void Awake()
         {
-            // if (!_isInitializeBindInfo)
-            // {
-            //     _isInitializeBindInfo = true;
-            //     InitUIEventBindInfo();
-            // }
             SearchBinders();
         }
 
@@ -101,53 +92,7 @@ namespace Causeless3t.UI
             await UniTask.CompletedTask;
         }
 
-        // protected virtual void OnDestroy()
-        // {
-        //     UnRegisterUIEvents();
-        //     _binders.Clear();
-        //     _cachedBinders.Clear();
-        // } 
-
         #endregion
-
-        // private static void InitUIEventBindInfo()
-        // {
-        //     var types = AppDomain.CurrentDomain.GetAssemblies()
-        //         .SelectMany(assembly => assembly.GetTypes());
-        //     foreach (var type in types)
-        //     {
-        //         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-        //             .Where(x => x.GetCustomAttribute(typeof(UIRegisterAttribute), true) != null);
-        //         foreach (var method in methods)
-        //         {
-        //             var attribute = method.GetCustomAttribute<UIRegisterAttribute>();
-        //             if (attribute.DelegateType == null)
-        //             {
-        //                 Debug.LogError("AutoRegistUIEvents Failed. actionType is error");
-        //                 return;
-        //             }
-        //
-        //             var key = attribute.Key;
-        //             if (string.IsNullOrEmpty(key))
-        //             {
-        //                 key = method.Name;
-        //             }
-        //
-        //             if (!UIEventBindInfo.TryGetValue(type, out var list))
-        //             {
-        //                 list = new();
-        //                 UIEventBindInfo.Add(type, list);
-        //             }
-        //             
-        //             list.Add(new()
-        //             {
-        //                 Item1 = key,
-        //                 Item2 = attribute.DelegateType,
-        //                 Item3 = method
-        //             });
-        //         }
-        //     }
-        // }
         
         /// <summary>
         /// 프로퍼티의 Setter에서 호출하여 변경사항을 키와 연결된 Ui에 적용합니다.  
@@ -158,18 +103,6 @@ namespace Causeless3t.UI
         public void BroadcastSetProperty<T>(string key, T value)
         {
             _binderRegistry.Find<IDataBinder<T>>(key)?.SetProperty(key, value);
-            // if (_cachedBinders.TryGetValue(key, out var cachedBinder))
-            // {
-            //     (cachedBinder as IDataBinder<T>)!.SetProperty(key, value);
-            //     return;
-            // }
-            // foreach (var binder in _binders)
-            // {
-            //     if (binder is not IDataBinder<T> dataBinder) continue;
-            //     if (!binder.HasKey(key)) continue;
-            //     _cachedBinders.TryAdd(key, binder);
-            //     dataBinder.SetProperty(key, value);
-            // }
         }
 
         /// <summary>
@@ -182,16 +115,6 @@ namespace Causeless3t.UI
             var binder = _binderRegistry.Find<IDataBinder<T>>(key);
 
             return binder != null ? binder.GetProperty(key) : default;
-            // if (_cachedBinders.TryGetValue(key, out var cachedBinder))
-            //     return (cachedBinder as IDataBinder<T>)!.GetProperty(key);
-            // foreach (var binder in _binders)
-            // {
-            //     if (binder is not IDataBinder<T> dataBinder) continue;
-            //     if (!binder.HasKey(key)) continue;
-            //     _cachedBinders.TryAdd(key, binder);
-            //     return dataBinder.GetProperty(key);
-            // }
-            // return default;
         }
         
         /// <summary>
@@ -203,80 +126,16 @@ namespace Causeless3t.UI
         public void BroadcastInvokeMethod<T>(string key, T param)
         {
             _binderRegistry.Find<ICommandBinder<T>>(key)?.InvokeMethod(key, param);
-            // if (_cachedBinders.TryGetValue(key, out var cachedBinder))
-            // {
-            //     (cachedBinder as ICommandBinder<T>)!.InvokeMethod(key, param);
-            //     return;
-            // }
-            // foreach (var binder in _binders)
-            // {
-            //     if (binder is not ICommandBinder<T> commandBinder) continue;
-            //     if (!binder.HasKey(key)) continue;
-            //     _cachedBinders.TryAdd(key, binder);
-            //     commandBinder.InvokeMethod(key, param);
-            // }
         }
-
-
-        // private void AutoRegistUIEvents(bool isRegister = true)
-        // {
-        //     if (!_isInitializeBindInfo) return;
-        //     
-        //     if (!UIEventBindInfo.TryGetValue(GetType(), out var bindInfoList))
-        //         return;
-        //
-        //     foreach (var tuple in bindInfoList)
-        //     {
-        //         try
-        //         {
-        //             // Delegate 생성
-        //             var createdDelegate = Delegate.CreateDelegate(tuple.Item2, this, tuple.Item3);
-        //
-        //             // 이벤트 등록
-        //             if (isRegister)
-        //                 RegisterUIEvent(tuple.Item1, createdDelegate);
-        //             else
-        //                 UnregisterUIEvent(tuple.Item1, createdDelegate);
-        //         }
-        //         catch (TargetParameterCountException e)
-        //         {
-        //             Debug.LogError("바인딩 키값이 적용된 함수의 함수 파라미터 인자 개수가 잘못되었습니다. =>" + tuple.Item3.Name +"," + tuple.Item2.ToString());
-        //         }
-        //     }
-        // }
         
         protected void RegisterUIEvent(string key, Delegate action)
         {
             _binderRegistry.Find<IUIEventBinder>(key)?.AddListener(key, action);
-            // if (_cachedBinders.TryGetValue(key, out var cachedBinder))
-            // {
-            //     (cachedBinder as IUIEventBinder)!.AddListener(key, action);
-            //     return;
-            // }
-            // foreach (var binder in _binders)
-            // {
-            //     if (binder is not IUIEventBinder eventBinder) continue;
-            //     if (!binder.HasKey(key)) continue;
-            //     _cachedBinders.TryAdd(key, binder);
-            //     eventBinder.AddListener(key, action);
-            // }
         }
         
         protected void UnregisterUIEvent(string key, Delegate action)
         {
             _binderRegistry.Find<IUIEventBinder>(key)?.RemoveListener(key, action);
-            // if (_cachedBinders.TryGetValue(key, out var cachedBinder))
-            // {
-            //     (cachedBinder as IUIEventBinder)!.RemoveListener(key, action);
-            //     return;
-            // }
-            // foreach (var binder in _binders)
-            // {
-            //     if (binder is not IUIEventBinder eventBinder) continue;
-            //     if (!binder.HasKey(key)) continue;
-            //     _cachedBinders.TryAdd(key, binder);
-            //     eventBinder.RemoveListener(key, action);
-            // }
         }
 
         /// <summary>
@@ -286,7 +145,6 @@ namespace Causeless3t.UI
         public void RegisterBinder(IBinder binder)
         {
             _binderRegistry.Register(binder);
-            // _binders.Add(dataBinder);
         }
 
         /// <summary>
@@ -296,8 +154,6 @@ namespace Causeless3t.UI
         public void SearchBinders()
         { 
             _binderRegistry.Clear();
-            // _binders.Clear();
-            // _cachedBinders.Clear();
             var binders = GetComponentsInChildren<IBinder>(true);
 
             
@@ -313,7 +169,6 @@ namespace Causeless3t.UI
         public void RegisterUIEvents()
         {
             SetUIEventsRegistered(true);
-            // AutoRegistUIEvents();
         }
 
         /// <summary>
@@ -322,7 +177,6 @@ namespace Causeless3t.UI
         public void UnRegisterUIEvents()
         {
             SetUIEventsRegistered(false);
-            // AutoRegistUIEvents(false);
         }
         
         private void SetUIEventsRegistered(bool register)
