@@ -268,14 +268,28 @@ namespace Causeless3t.UI
         /// </summary>
         public void SearchBinders()
         { 
+            var restoreUIEvents = _isUIEventsRegistered;
+
+            if (restoreUIEvents)
+            {
+                UnRegisterUIEvents();
+            }
+
             _binderRegistry.Clear();
+
             var binders = GetComponentsInChildren<IBinder>(true);
 
-            
             foreach (var binder in binders)
-                binder.Bind(); // 하위로부터 바인딩하는 형태로 만든 이유는 부모가 active되지 않을 경우 등록되지 않는 경우가 생기기 때문
+            {
+                binder.Bind();
+            }
 
             IsInitializedBinder = true;
+
+            if (restoreUIEvents)
+            {
+                RegisterUIEvents();
+            }
         }
         
         #endregion
