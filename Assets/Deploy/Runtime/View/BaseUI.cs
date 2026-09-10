@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
@@ -18,9 +19,23 @@ namespace Causeless3t.UI
 
     public class BaseUI : MonoBehaviour, IBinderManager
     {
+        private readonly struct UIEventCallback
+        {
+            public string Key { get; }
+            public Delegate Callback { get; }
+
+            public UIEventCallback(string key, Delegate callback)
+            {
+                Key = key;
+                Callback = callback;
+            }
+        }
+        
         private readonly BinderRegistry _binderRegistry = new();
+        private readonly List<UIEventCallback> _uiEventCallbacks = new();
 
         private bool _isUIEventsRegistered;
+        private bool _isUIEventCallbacksInitialized;
         
         public bool IsInitializedBinder { get; private set; }
         
@@ -140,104 +155,6 @@ namespace Causeless3t.UI
         
         #endregion
         
-        #region Event Binding
-        
-        protected void RegisterUIEvent(string key, Delegate action)
-        {
-            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
-            {
-                binder.AddListener(key, action);
-            }
-        }
-        
-        protected void UnregisterUIEvent(string key, Delegate action)
-        {
-            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
-            {
-                binder.RemoveListener(key, action);
-            }
-        }
-        
-        /// <summary>
-        /// UI 이벤트의 콜백을 등록하기 위한 메소드
-        /// </summary>
-        public void RegisterUIEvents()
-        {
-            if (_isUIEventsRegistered)
-                return;
-
-            _isUIEventsRegistered = true;
-
-            SetUIEventsRegistered(true);
-        }
-
-        /// <summary>
-        /// UI 이벤트의 콜백을 등록해제하기 위한 메소드
-        /// </summary>
-        public void UnRegisterUIEvents()
-        {
-            if (!_isUIEventsRegistered)
-                return;
-
-            SetUIEventsRegistered(false);
-
-            _isUIEventsRegistered = false;
-        }
-        
-        private void SetUIEventsRegistered(bool register)
-        {
-            foreach (var binding in UIEventBindingRegistry.GetBindings(GetType()))
-            {
-                try
-                {
-                    var callback = Delegate.CreateDelegate(binding.DelegateType, 
-                        this,
-                        binding.Method);
-
-                    if (register)
-                        RegisterUIEvent(binding.Key, callback);
-                    else
-                        UnregisterUIEvent(binding.Key, callback);
-                }
-                catch (TargetParameterCountException)
-                {
-                    Debug.LogError($"Invalid UI event binding: {binding.Method.Name}");
-                }
-            }
-        }
-        
-        private void RegisterUIEventsToBinder(IBinder binder)
-        {
-            if (binder is not IEventBinder eventBinder)
-                return;
-
-            var bindings = UIEventBindingRegistry.GetBindings(GetType());
-
-            foreach (var binding in bindings)
-            {
-                if (!binder.HasKey(binding.Key))
-                    continue;
-
-                try
-                {
-                    var callback = Delegate.CreateDelegate(
-                        binding.DelegateType,
-                        this,
-                        binding.Method);
-
-                    eventBinder.AddListener(binding.Key, callback);
-                }
-                catch (ArgumentException e)
-                {
-                    Debug.LogError(
-                        $"Failed to bind UI event '{binding.Key}' " +
-                        $"to {GetType().Name}.{binding.Method.Name}\n{e.Message}");
-                }
-            }
-        }
-        
-        #endregion
-
         #region Binder Management
         
         /// <summary>
@@ -289,6 +206,113 @@ namespace Causeless3t.UI
             if (restoreUIEvents)
             {
                 RegisterUIEvents();
+            }
+        }
+        
+        #endregion
+        
+        #region Event Binding
+        
+        /// <summary>
+        /// UI 이벤트의 콜백을 등록하기 위한 메소드
+        /// </summary>
+        public void RegisterUIEvents()
+        {
+            if (_isUIEventsRegistered)
+                return;
+
+            EnsureUIEventCallbacks();
+            
+            foreach (var eventCallback in _uiEventCallbacks)
+            {
+                RegisterUIEvent(
+                    eventCallback.Key,
+                    eventCallback.Callback);
+            }
+
+            _isUIEventsRegistered = true;
+        }
+
+        /// <summary>
+        /// UI 이벤트의 콜백을 등록해제하기 위한 메소드
+        /// </summary>
+        public void UnRegisterUIEvents()
+        {
+            if (!_isUIEventsRegistered)
+                return;
+
+            foreach (var eventCallback in _uiEventCallbacks)
+            {
+                UnregisterUIEvent(
+                    eventCallback.Key,
+                    eventCallback.Callback);
+            }
+
+            _isUIEventsRegistered = false;
+        }
+        
+        protected void RegisterUIEvent(string key, Delegate action)
+        {
+            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
+            {
+                binder.AddListener(key, action);
+            }
+        }
+        
+        protected void UnregisterUIEvent(string key, Delegate action)
+        {
+            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
+            {
+                binder.RemoveListener(key, action);
+            }
+        }
+        
+        private void EnsureUIEventCallbacks()
+        {
+            if (_isUIEventCallbacksInitialized)
+                return;
+
+            var bindings = UIEventBindingRegistry.GetBindings(GetType());
+
+            foreach (var binding in bindings)
+            {
+                try
+                {
+                    var callback = Delegate.CreateDelegate(
+                        binding.DelegateType,
+                        this,
+                        binding.Method);
+
+                    _uiEventCallbacks.Add(
+                        new UIEventCallback(
+                            binding.Key,
+                            callback));
+                }
+                catch (ArgumentException e)
+                {
+                    Debug.LogError(
+                        $"Failed to create UI event delegate '{binding.Key}' " +
+                        $"for {GetType().Name}.{binding.Method.Name}\n{e.Message}",
+                        this);
+                }
+            }
+            
+            _isUIEventCallbacksInitialized = true;
+        }
+        
+        private void RegisterUIEventsToBinder(IBinder binder)
+        {
+            if (binder is not IEventBinder eventBinder)
+                return;
+
+            EnsureUIEventCallbacks();
+            
+            foreach (var eventCallback in _uiEventCallbacks)
+            {
+                if (!binder.HasKey(eventCallback.Key))
+                    continue;
+
+                eventBinder.AddListener(eventCallback.Key, eventCallback.Callback);
             }
         }
         
