@@ -1,8 +1,6 @@
-using System.Threading;
-using Cysharp.Threading.Tasks;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Causeless3t.UI
@@ -24,7 +22,7 @@ namespace Causeless3t.UI
         /// </summary>
         private static readonly float RecognizeVeryLongTapTime = 5f;
         
-        private CancellationTokenSource _longTapLoopToken;
+        private Coroutine _longTapCoroutine;
         private float _loopingTimer; 
         [SerializeField] private ButtonClickedEvent _longTapEvent = new();
         [SerializeField] private ButtonClickedEvent _veryLongTapEvent = new();
@@ -41,7 +39,6 @@ namespace Causeless3t.UI
         float GetRecognizeVeryLongTabCycle()
         { 
             var longTabCycle = RecognizeVeryLongTabCycle * (scale.Evaluate(_loopingTimer));
-            // this.Log(longTabCycle.ToString("0.000") +"," + scale.Evaluate(_loopingTimer));
             return longTabCycle;
         }
         
@@ -51,64 +48,92 @@ namespace Causeless3t.UI
             set => _veryLongTapEvent = value;
         }
 
-        private async UniTask UpdateLongTap()
+        private void StopLongTap()
         {
-            _loopingTimer = 0f; 
-            while (_longTapLoopToken is { IsCancellationRequested: false })
-            { 
-                await UniTask.WaitForSeconds(GetRecognizeVeryLongTabCycle(), cancellationToken: _longTapLoopToken.Token,
-                    cancelImmediately: true, ignoreTimeScale: true);
-                _loopingTimer += RecognizeVeryLongTabCycle;
-                if (_loopingTimer < RecognizeLongTapTime) continue;
-                if (_loopingTimer < RecognizeVeryLongTapTime)
-                {
-                    await UniTask.WaitForSeconds(RecognizeCycle, cancellationToken: _longTapLoopToken.Token,
-                        cancelImmediately: true, ignoreTimeScale: true);
-                    _loopingTimer += RecognizeCycle;
-                    UISystemProfilerApi.AddMarker("LongTapButton.onLongTap", this);
-                    _longTapEvent.Invoke();
-                    continue;
-                }
-                UISystemProfilerApi.AddMarker("LongTapButton.onVeryLongTap", this);
-                _veryLongTapEvent.Invoke();
-                
-            }
-        }
+            if (_longTapCoroutine == null)
+                return;
 
-        /// <summary>
-        /// 롱탭버튼과 스크롤뷰가 겹쳤을때 드래그 이벤트로 인해 롱탭이 풀리는 버그로 구현한 임시 메소드.
-        /// 버튼에서 실제로 손을 뗐을 때를 체크한다. 
-        /// </summary>
-        private async UniTask UpdatePointerUp()
+            StopCoroutine(_longTapCoroutine);
+            _longTapCoroutine = null;
+        }
+        
+        public override void OnPointerUp(PointerEventData eventData)
         {
-#if UNITY_EDITOR
-            await UniTask.WaitUntil(() => Input.GetMouseButtonUp(0) || !gameObject.activeInHierarchy, cancellationToken:_longTapLoopToken.Token);
-#else
-            await UniTask.WaitUntil(() => Input.touchCount == 0 || !gameObject.activeInHierarchy, cancellationToken:_longTapLoopToken.Token);
-#endif
-            OnPointerUp(new PointerEventData(null){ button = PointerEventData.InputButton.Left });
-            _longTapLoopToken?.Cancel();
-            _longTapLoopToken = null;
+            base.OnPointerUp(eventData);
+
+            StopLongTap();
         }
 
         public override void OnPointerExit(PointerEventData eventData)
         {
             base.OnPointerExit(eventData);
-            _longTapLoopToken?.Cancel();
-            _longTapLoopToken = null;
+
+            StopLongTap();
         }
 
         public override void OnPointerDown(PointerEventData eventData)
         {
             base.OnPointerDown(eventData);
-            
+
             if (!IsActive() || !IsInteractable())
                 return;
-            
-            _longTapLoopToken?.Cancel();
-            _longTapLoopToken = new CancellationTokenSource();
-            UpdateLongTap().Forget();
-            UpdatePointerUp().Forget();
+
+            StopLongTap();
+
+            _longTapCoroutine =
+                StartCoroutine(LongTapCoroutine());
+        }
+        
+        private IEnumerator LongTapCoroutine()
+        {
+            _loopingTimer = 0f;
+
+            var nextInvokeTime = RecognizeLongTapTime;
+
+            while (IsPointerPressed())
+            {
+                _loopingTimer += Time.unscaledDeltaTime;
+
+                if (_loopingTimer < nextInvokeTime)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                if (_loopingTimer < RecognizeVeryLongTapTime)
+                {
+                    UISystemProfilerApi.AddMarker(
+                        "LongTapButton.onLongTap",
+                        this);
+
+                    _longTapEvent.Invoke();
+
+                    nextInvokeTime += RecognizeCycle;
+                }
+                else
+                {
+                    UISystemProfilerApi.AddMarker(
+                        "LongTapButton.onVeryLongTap",
+                        this);
+
+                    _veryLongTapEvent.Invoke();
+
+                    nextInvokeTime += GetRecognizeVeryLongTabCycle();
+                }
+
+                yield return null;
+            }
+
+            _longTapCoroutine = null;
+        }
+        
+        private bool IsPointerPressed()
+        {
+#if UNITY_EDITOR
+            return Input.GetMouseButton(0) && gameObject.activeInHierarchy;
+#else
+            return Input.touchCount > 0 &&gameObject.activeInHierarchy;
+#endif
         }
     }
 }

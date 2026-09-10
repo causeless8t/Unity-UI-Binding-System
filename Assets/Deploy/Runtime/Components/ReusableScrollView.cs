@@ -1,8 +1,6 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
-using Causeless3t.Core;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -63,9 +61,7 @@ namespace Causeless3t.UI
             get
             {
                 if (_cachedSize.Equals(default))
-                    return _itemPrefab.IsUnityNull()
-                        ? Vector2.zero
-                        : _itemPrefab.GetComponent<RectTransform>().rect.size;
+                    return _itemPrefab == null ? Vector2.zero : _itemPrefab.GetComponent<RectTransform>().rect.size;
                 return _cachedSize;
             }
         }
@@ -112,7 +108,7 @@ namespace Causeless3t.UI
         protected override void OnDestroy()
         {
             _listData.Clear();
-            _itemList.ForEach(itemUI => DestroyImmediate(itemUI.RootRectTransform.gameObject));
+            _itemList.ForEach(itemUI => Destroy(itemUI.RootRectTransform.gameObject));
             _itemList.Clear();
             onValueChanged.RemoveListener(OnValueChanged);
             base.OnDestroy();
@@ -249,13 +245,13 @@ namespace Causeless3t.UI
             }
 
             if (vertical)
-                OnTweenAction(content.anchoredPosition.y, indexPos.y,
+                StartTween(content.anchoredPosition.y, indexPos.y,
                     (from, to, t) => content.anchoredPosition =
-                        new Vector2(content.anchoredPosition.x, Mathf.Lerp(from, to, t)), duration).Forget();
+                        new Vector2(content.anchoredPosition.x, Mathf.Lerp(from, to, t)), duration);
             else
-                OnTweenAction(content.anchoredPosition.x, indexPos.x,
+                StartTween(content.anchoredPosition.x, indexPos.x,
                     (from, to, t) => content.anchoredPosition =
-                        new Vector2(Mathf.Lerp(from, to, t), content.anchoredPosition.y), duration).Forget();
+                        new Vector2(Mathf.Lerp(from, to, t), content.anchoredPosition.y), duration);
         }
 
         /// <summary>
@@ -278,32 +274,56 @@ namespace Causeless3t.UI
             }
 
             if (vertical)
-                OnTweenAction(verticalNormalizedPosition, pos,
-                    (from, to, t) => verticalNormalizedPosition = Mathf.Lerp(from, to, t), duration).Forget();
+                StartTween(verticalNormalizedPosition, pos,
+                    (from, to, t) => verticalNormalizedPosition = Mathf.Lerp(from, to, t), duration);
             else
-                OnTweenAction(horizontalNormalizedPosition, pos,
-                    (from, to, t) => horizontalNormalizedPosition = Mathf.Lerp(from, to, t), duration).Forget();
+                StartTween(horizontalNormalizedPosition, pos,
+                    (from, to, t) => horizontalNormalizedPosition = Mathf.Lerp(from, to, t), duration);
         }
 
-        private CancellationTokenSource _tweenCTS;
-        private async UniTask OnTweenAction(float fromValue, float toValue, Action<float, float, float> action, float duration)
+        private Coroutine _tweenCoroutine;
+
+        private void StartTween(
+            float fromValue,
+            float toValue,
+            Action<float, float, float> action,
+            float duration)
         {
-            _tweenCTS?.Cancel();
-            _tweenCTS = new CancellationTokenSource();
+            if (_tweenCoroutine != null)
+                StopCoroutine(_tweenCoroutine);
+
+            _tweenCoroutine = StartCoroutine(
+                TweenCoroutine(fromValue, toValue, action, duration));
+        }
+
+        private IEnumerator TweenCoroutine(
+            float fromValue,
+            float toValue,
+            Action<float, float, float> action,
+            float duration)
+        {
             var timer = 0f;
-            while (timer <= duration)
+
+            while (timer < duration)
             {
-                if (_tweenCTS.IsCancellationRequested) return;
-                action?.Invoke(fromValue, toValue, Mathf.Min(timer/duration, 1.0f));
-                await UniTask.Yield();
+                action?.Invoke(
+                    fromValue,
+                    toValue,
+                    Mathf.Clamp01(timer / duration));
+
                 timer += Time.deltaTime;
+
+                yield return null;
             }
-            _tweenCTS = null;
+
+            action?.Invoke(fromValue, toValue, 1f);
+
+            _tweenCoroutine = null;
         }
 
         private void ResetView()
         {
-            if (_itemPrefab.IsUnityNull()) return;
+            if (_itemPrefab == null) return;
             _columnCount = Mathf.Max(1, _columnCount);
 
             if (!_isInitView)
@@ -379,7 +399,7 @@ namespace Causeless3t.UI
                         _cachedSize = itemRect.rect.size;
                     itemRect.anchoredPosition = GetPositionByIndex(dataIndex);
                     var baseUi = itemRect.GetComponent<BaseUI>();
-                    if (!baseUi.IsReferenceNull())
+                    if (baseUi != null)
                     {
                         baseUi.Open();
                     }
@@ -395,22 +415,50 @@ namespace Causeless3t.UI
         /// 뷰포트의 크기가 달라지거나 아이템의 크기가 달라질때(ex. 해상도 변경) 현재 생성된 모든 아이템들의 사이즈를 변경하고 위치를 재정렬해주는 함수.
         /// 호출비용이 높아 아이템을 추가한 뒤 한번만 호출하는 편이 좋다.
         /// </summary>
-        public async UniTask RefreshItemSize()
+        public void RefreshItemSize()
         {
-            await UniTask.Yield(); // 레이아웃의 변경을 기다리는 단계
-            if (!_isInitView || _itemList.Count == 0) return;
+            StartCoroutine(RefreshItemSizeCoroutine());
+        }
+        
+        private IEnumerator RefreshItemSizeCoroutine()
+        {
+            // 레이아웃 갱신 대기
+            yield return null;
+
+            if (!_isInitView || _itemList.Count == 0)
+                yield break;
+
             _cachedSize = default;
-            _itemList.ForEach(itemUI => DestroyImmediate(itemUI.RootRectTransform.gameObject));
+
+            foreach (var itemUI in _itemList)
+            {
+                Destroy(itemUI.RootRectTransform.gameObject);
+            }
+
             _itemList.Clear();
-            await UniTask.Yield(); // 아이템이 지워지길 기다리는 단계
+
+            // Destroy 반영 대기
+            yield return null;
+
             ScrollToPosition(0);
+
             _diffPreFramePosition = 0;
+
             var count = vertical
-                ? viewport.rect.height / (ItemSize.y + ItemSpace.y / 2)
-                : viewport.rect.width / (ItemSize.x + ItemSpace.x / 2);
-            count = Mathf.Max(0f, count - SizeThreshold);
-            _viewableItemCount = Mathf.CeilToInt(count) + 2;
+                ? viewport.rect.height /
+                  (ItemSize.y + ItemSpace.y / 2)
+                : viewport.rect.width /
+                  (ItemSize.x + ItemSpace.x / 2);
+
+            count = Mathf.Max(
+                0f,
+                count - SizeThreshold);
+
+            _viewableItemCount =
+                Mathf.CeilToInt(count) + 2;
+
             _isInitView = false;
+
             InitializeView();
             ResetView();
         }
@@ -431,7 +479,7 @@ namespace Causeless3t.UI
 
         private Vector2 GetPositionByIndex(int index)
         {
-            if (_itemPrefab.IsUnityNull()) return Vector2.zero;
+            if (_itemPrefab == null) return Vector2.zero;
             int column = index % _columnCount;
             int row = index / _columnCount;
             float halfSize = (_columnCount * (ItemSize.x + ItemSpace.x) - ItemSpace.x) / 2;

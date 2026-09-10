@@ -1,8 +1,6 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
-using Causeless3t.Core;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -228,15 +226,15 @@ namespace Causeless3t.UI
                 content.anchoredPosition = vertical ? new Vector2(content.anchoredPosition.x, indexPos.y) : new Vector2(indexPos.x, content.anchoredPosition.y);
                 return;
             }
-            
+
             if (vertical)
-                OnTweenAction(content.anchoredPosition.y, indexPos.y,
+                StartTween(content.anchoredPosition.y, indexPos.y,
                     (from, to, t) => content.anchoredPosition =
-                        new Vector2(content.anchoredPosition.x, Mathf.Lerp(from, to, t)), duration).Forget();
+                        new Vector2(content.anchoredPosition.x, Mathf.Lerp(from, to, t)), duration);
             else
-                OnTweenAction(content.anchoredPosition.x, indexPos.x,
+                StartTween(content.anchoredPosition.x, indexPos.x,
                     (from, to, t) => content.anchoredPosition =
-                        new Vector2(Mathf.Lerp(from, to, t), content.anchoredPosition.y), duration).Forget();
+                        new Vector2(Mathf.Lerp(from, to, t), content.anchoredPosition.y), duration);
         }
 
         /// <summary>
@@ -258,32 +256,56 @@ namespace Causeless3t.UI
             }
             
             if (vertical)
-                OnTweenAction(verticalNormalizedPosition, pos,
-                    (from, to, t) => verticalNormalizedPosition = Mathf.Lerp(from, to, t), duration).Forget();
+                StartTween(verticalNormalizedPosition, pos,
+                    (from, to, t) => verticalNormalizedPosition = Mathf.Lerp(from, to, t), duration);
             else
-                OnTweenAction(horizontalNormalizedPosition, pos,
-                    (from, to, t) => horizontalNormalizedPosition = Mathf.Lerp(from, to, t), duration).Forget();
+                StartTween(horizontalNormalizedPosition, pos,
+                    (from, to, t) => horizontalNormalizedPosition = Mathf.Lerp(from, to, t), duration);
         }
         
-        private CancellationTokenSource _tweenCTS;
-        private async UniTask OnTweenAction(float fromValue, float toValue, Action<float, float, float> action, float duration)
+        private Coroutine _tweenCoroutine;
+
+        private void StartTween(
+            float fromValue,
+            float toValue,
+            Action<float, float, float> action,
+            float duration)
         {
-            _tweenCTS?.Cancel();
-            _tweenCTS = new CancellationTokenSource();
+            if (_tweenCoroutine != null)
+                StopCoroutine(_tweenCoroutine);
+
+            _tweenCoroutine = StartCoroutine(
+                TweenCoroutine(fromValue, toValue, action, duration));
+        }
+
+        private IEnumerator TweenCoroutine(
+            float fromValue,
+            float toValue,
+            Action<float, float, float> action,
+            float duration)
+        {
             var timer = 0f;
-            while (timer <= duration)
+
+            while (timer < duration)
             {
-                if (_tweenCTS.IsCancellationRequested) return;
-                action?.Invoke(fromValue, toValue, Mathf.Min(timer/duration, 1.0f));
-                await UniTask.Yield();
+                action?.Invoke(
+                    fromValue,
+                    toValue,
+                    Mathf.Clamp01(timer / duration));
+
                 timer += Time.deltaTime;
+
+                yield return null;
             }
-            _tweenCTS = null;
+
+            action?.Invoke(fromValue, toValue, 1f);
+
+            _tweenCoroutine = null;
         }
 
         private void ResetView()
         {
-            if (_itemPrefab.IsUnityNull()) return;
+            if (_itemPrefab == null) return;
 
             if (!_isInitView)
                 InitializeView();
@@ -353,7 +375,7 @@ namespace Causeless3t.UI
                 ItemSize = itemRect.rect.size;
                 itemRect.anchoredPosition = GetPositionByIndex(dataIndex);
                 var baseUi = itemRect.GetComponent<BaseUI>();
-                if (!baseUi.IsReferenceNull())
+                if (baseUi != null)
                 {
                     baseUi.Open();
                 }
@@ -385,7 +407,7 @@ namespace Causeless3t.UI
 
         private Vector2 GetPositionByIndex(int index)
         {
-            if (_itemPrefab.IsUnityNull()) return Vector2.zero;
+            if (_itemPrefab == null) return Vector2.zero;
             Vector2 itemSize = vertical ? 
                     new Vector2(ItemSize.x, index >= 0 && index < _listData.Count ? _listData[index].GetItemSize() : ItemSize.y) :
                     new Vector2(index >= 0 && index < _listData.Count ? _listData[index].GetItemSize() : ItemSize.x, ItemSize.y);
