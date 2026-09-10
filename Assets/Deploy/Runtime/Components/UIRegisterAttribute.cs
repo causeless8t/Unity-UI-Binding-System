@@ -1,11 +1,12 @@
 using System;
 using TMPro;
+using UnityEngine.Scripting;
 using UnityEngine.UI;
 
 namespace Causeless3t.UI
 {
     [AttributeUsage(AttributeTargets.Method)]
-    public abstract class UIRegisterAttribute : Attribute
+    public abstract class UIRegisterAttribute : PreserveAttribute
     { 
         public string Key;
         public abstract Type DelegateType { get; }

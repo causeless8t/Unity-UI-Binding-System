@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -57,63 +56,103 @@ namespace Causeless3t.UI
                 if (attribute == null)
                     continue;
 
-                if (attribute.DelegateType == null)
+                if (!TryValidate(type, method, attribute, out var key))
                 {
-                    Debug.LogError(
-                        $"[{nameof(UIRegisterAttribute)}] DelegateType is null: " +
-                        $"{type.FullName}.{method.Name}");
-
                     continue;
                 }
-
-                if (!IsCompatible(method, attribute.DelegateType))
-                {
-                    Debug.LogError(
-                        $"[{nameof(UIRegisterAttribute)}] Delegate signature mismatch: " +
-                        $"{type.FullName}.{method.Name} / " +
-                        $"{attribute.DelegateType.FullName}");
-
-                    continue;
-                }
-
-                var key = string.IsNullOrEmpty(attribute.Key)
-                    ? method.Name
-                    : attribute.Key;
 
                 bindings.Add(new UIEventBindingInfo(key, attribute.DelegateType, method));
             }
 
-            return bindings;
+            return bindings.ToArray();
         }
 
-        private static bool IsCompatible(MethodInfo method, Type delegateType)
+        private static bool TryValidate(Type targetType, MethodInfo method, UIRegisterAttribute attribute, out string key)
         {
-            if (!typeof(Delegate).IsAssignableFrom(delegateType))
-                return false;
+            key = string.IsNullOrEmpty(attribute.Key) ? method.Name : attribute.Key;
 
-            var invokeMethod = delegateType.GetMethod("Invoke");
+            if (attribute.DelegateType == null)
+            {
+                Debug.LogError(
+                    $"{FormatMethod(targetType, method)}: " +
+                    $"{nameof(UIRegisterAttribute)} DelegateType is null.");
+
+                return false;
+            }
+
+            if (!typeof(Delegate).IsAssignableFrom(attribute.DelegateType))
+            {
+                Debug.LogError(
+                    $"{FormatMethod(targetType, method)}: " +
+                    $"{attribute.DelegateType.Name} is not a delegate type.");
+
+                return false;
+            }
+
+            var invokeMethod = attribute.DelegateType.GetMethod("Invoke");
 
             if (invokeMethod == null)
+            {
+                Debug.LogError(
+                    $"{FormatMethod(targetType, method)}: " +
+                    $"Delegate Invoke method could not be found.");
+
                 return false;
+            }
 
             if (invokeMethod.ReturnType != method.ReturnType)
+            {
+                LogSignatureMismatch(
+                    targetType,
+                    method,
+                    attribute.DelegateType);
+
                 return false;
+            }
 
             var delegateParameters = invokeMethod.GetParameters();
             var methodParameters = method.GetParameters();
 
             if (delegateParameters.Length != methodParameters.Length)
+            {
+                LogSignatureMismatch(
+                    targetType,
+                    method,
+                    attribute.DelegateType);
+
                 return false;
+            }
 
             for (var i = 0; i < delegateParameters.Length; i++)
             {
-                if (delegateParameters[i].ParameterType != methodParameters[i].ParameterType)
+                if (delegateParameters[i].ParameterType ==
+                    methodParameters[i].ParameterType)
                 {
-                    return false;
+                    continue;
                 }
+
+                LogSignatureMismatch(
+                    targetType,
+                    method,
+                    attribute.DelegateType);
+
+                return false;
             }
 
             return true;
+        }
+        
+        private static void LogSignatureMismatch(Type targetType, MethodInfo method, Type delegateType)
+        {
+            Debug.LogError(
+                $"{FormatMethod(targetType, method)}: " +
+                $"method signature does not match delegate " +
+                $"'{delegateType.Name}'.");
+        }
+
+        private static string FormatMethod(Type targetType, MethodInfo method)
+        {
+            return $"{targetType.FullName}.{method.Name}";
         }
 
         public static void Clear()
