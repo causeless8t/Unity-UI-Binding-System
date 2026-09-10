@@ -24,9 +24,8 @@ namespace Causeless3t.Sample
         public ReusableScrollView SampleScrollView => BroadcastGetProperty<ReusableScrollView>(nameof(SampleScrollView));
 
         // Start is called before the first frame update
-        protected override void Start()
+        void Start()
         {
-            base.Start();
             UniTask.Create(async () =>
             {
                 await UniTask.WaitUntil(() => SampleScrollView.IsInitialized);

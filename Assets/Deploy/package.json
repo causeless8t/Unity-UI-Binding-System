@@ -1,13 +1,18 @@
 {
   "name": "com.causeless3t.mvvm-ui",
   "version": "1.0.1",
-  "displayName": "MVVM-UI",
-  "description": "MVVM UI",
-  "changelogUrl": "https://github.com/causeless8t/MVVM-UI.git/Assets/Deploy/CHANGELOG.md",
+  "displayName": "Unity UI Binding System",
+  "description": "Key 기반 UI Property / Event / Command Binding System",
+  "changelogUrl": "https://github.com/causeless8t/Unity-UI-Binding-System.git/Assets/Deploy/CHANGELOG.md",
   "unity": "2022.3",
-  "author": "causeless3t",
+  "author": {
+    "name": "Hamin Jeong",
+    "url": "https://github.com/causeless8t"
+  },
   "keywords": [
-    "MVVM-UI"
+    "unity",
+    "ui",
+    "binding"
   ],
   "gitDependencies": {}
 }

@@ -1,12 +1,12 @@
 {
-    "name": "MVVMEditor",
+    "name": "Causeless3t.UIBinding",
     "rootNamespace": "",
     "references": [
-        "GUID:e56d0ac756a1e4e9bbf38e6677ed21c5"
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:6d9403147bf0b4895b7181bef2191e12"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
