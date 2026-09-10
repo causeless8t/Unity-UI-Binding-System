@@ -37,11 +37,17 @@ namespace Causeless3t.UI
 
         public T Find<T>(string key) where T : class
         {
+            if (string.IsNullOrEmpty(key))
+                return null;
+            
             var cacheKey = (key, typeof(T));
 
             if (_cachedBinders.TryGetValue(cacheKey, out var cachedBinder))
             {
-                return cachedBinder as T;
+                if (cachedBinder is T typedBinder)
+                    return typedBinder;
+
+                _cachedBinders.Remove(cacheKey);
             }
 
             foreach (var binder in _binders)
@@ -49,16 +55,29 @@ namespace Causeless3t.UI
                 if (!binder.HasKey(key))
                     continue;
                 
-                if (binder is not T targetBinder)
+                if (binder is not T typedBinder)
                     continue;
-
                 
-
                 _cachedBinders[cacheKey] = binder;
-                return targetBinder;
+                return typedBinder;
             }
 
             return null;
+        }
+        
+        public IEnumerable<T> FindAll<T>(string key) where T : class
+        {
+            if (string.IsNullOrEmpty(key))
+                yield break;
+
+            foreach (var binder in _binders)
+            {
+                if (!binder.HasKey(key))
+                    continue;
+
+                if (binder is T typedBinder)
+                    yield return typedBinder;
+            }
         }
         
         private void RemoveCacheFor(IBinder binder)

@@ -102,7 +102,10 @@ namespace Causeless3t.UI
         /// <param name="value">프로퍼티의 값</param>
         public void BroadcastSetProperty<T>(string key, T value)
         {
-            _binderRegistry.Find<IDataBinder<T>>(key)?.SetProperty(key, value);
+            foreach (var binder in _binderRegistry.FindAll<IDataBinder<T>>(key))
+            {
+                binder.SetProperty(key, value);
+            }
         }
 
         /// <summary>
@@ -129,7 +132,10 @@ namespace Causeless3t.UI
         // BaseUi -> UI Component (ex: GameObject.SetActive(bool))
         public void BroadcastInvokeMethod<T>(string key, T param)
         {
-            _binderRegistry.Find<ICommandBinder<T>>(key)?.InvokeMethod(key, param);
+            foreach (var binder in _binderRegistry.FindAll<ICommandBinder<T>>(key))
+            {
+                binder.InvokeMethod(key, param);
+            }
         }
         
         #endregion
@@ -138,12 +144,18 @@ namespace Causeless3t.UI
         
         protected void RegisterUIEvent(string key, Delegate action)
         {
-            _binderRegistry.Find<IUIEventBinder>(key)?.AddListener(key, action);
+            foreach (var binder in _binderRegistry.FindAll<IUIEventBinder>(key))
+            {
+                binder.AddListener(key, action);
+            }
         }
         
         protected void UnregisterUIEvent(string key, Delegate action)
         {
-            _binderRegistry.Find<IUIEventBinder>(key)?.RemoveListener(key, action);
+            foreach (var binder in _binderRegistry.FindAll<IUIEventBinder>(key))
+            {
+                binder.RemoveListener(key, action);
+            }
         }
         
         /// <summary>
