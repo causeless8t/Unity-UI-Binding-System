@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Causeless3t.UI
 {
-    public sealed class GameObjectBinder : DataBinder<GameObject>, IDataBinder<bool>, ICommandBinder<bool>
+    public sealed class GameObjectBinder : ComponentBinder<GameObject>, IPropertyBinder<bool>, ICommandBinder<bool>
     {
         public enum eGameObjectProperty
         {
@@ -42,7 +42,7 @@ namespace Causeless3t.UI
             // Only Getter
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -59,7 +59,7 @@ namespace Causeless3t.UI
         
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        public void InvokeMethod(string key, bool value)
+        public void InvokeMethod(string key, bool param)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -69,7 +69,7 @@ namespace Causeless3t.UI
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eGameObjectProperty.SetActive: Target.SetActive(value); break;
+                case eGameObjectProperty.SetActive: Target.SetActive(param); break;
             }
         }
     }

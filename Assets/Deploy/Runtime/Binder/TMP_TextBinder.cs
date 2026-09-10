@@ -8,8 +8,8 @@ using UnityEngine;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(TMP_Text))]
-    public sealed class TMPTextBinder : DataBinder<TMP_Text>,
-        IDataBinder<string>, IDataBinder<Color>, IDataBinder<float>
+    public sealed class TMPTextBinder : ComponentBinder<TMP_Text>,
+        IPropertyBinder<string>, IPropertyBinder<Color>, IPropertyBinder<float>
     {
         public enum eTMP_TextProperty
         {
@@ -81,7 +81,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        Color IDataBinder<Color>.GetProperty(string key)
+        Color IPropertyBinder<Color>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -96,7 +96,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        float IDataBinder<float>.GetProperty(string key)
+        float IPropertyBinder<float>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -112,7 +112,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        string IDataBinder<string>.GetProperty(string key)
+        string IPropertyBinder<string>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(Image))]
-    public sealed class ImageBinder : DataBinder<Image>, IDataBinder<Sprite>, IDataBinder<float>, IDataBinder<Color>
+    public sealed class ImageBinder : ComponentBinder<Image>, IPropertyBinder<Sprite>, IPropertyBinder<float>, IPropertyBinder<Color>
     {
         public enum eImageProperty
         {
@@ -76,7 +76,7 @@ namespace Causeless3t.UI
             }
         }
 
-        Color IDataBinder<Color>.GetProperty(string key)
+        Color IPropertyBinder<Color>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -93,7 +93,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        float IDataBinder<float>.GetProperty(string key)
+        float IPropertyBinder<float>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -108,7 +108,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        Sprite IDataBinder<Sprite>.GetProperty(string key)
+        Sprite IPropertyBinder<Sprite>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

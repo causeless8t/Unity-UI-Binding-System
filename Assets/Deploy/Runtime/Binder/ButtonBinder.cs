@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(Button))]
-    public sealed class ButtonBinder : DataBinder<Button>, IDataBinder<bool>, IUIEventBinder
+    public sealed class ButtonBinder : ComponentBinder<Button>, IPropertyBinder<bool>, IEventBinder
     {
         public enum ButtonProperty
         {
@@ -81,7 +81,7 @@ namespace Causeless3t.UI
             }
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             EnsureBindData();
             if (_bindInfoDic == null) return default;

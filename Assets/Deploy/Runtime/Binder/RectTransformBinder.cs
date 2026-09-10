@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(RectTransform))]
-    public sealed class RectTransformBinder : DataBinder<RectTransform>,
-        IDataBinder<Vector2>, IDataBinder<Vector3>, IDataBinder<Quaternion>, IDataBinder<Rect>
+    public sealed class RectTransformBinder : ComponentBinder<RectTransform>,
+        IPropertyBinder<Vector2>, IPropertyBinder<Vector3>, IPropertyBinder<Quaternion>, IPropertyBinder<Rect>
     {
         public enum eRectTransformProperty
         {
@@ -86,7 +86,7 @@ namespace Causeless3t.UI
             // Only Getter
         }
 
-        Rect IDataBinder<Rect>.GetProperty(string key)
+        Rect IPropertyBinder<Rect>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -103,7 +103,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        Quaternion IDataBinder<Quaternion>.GetProperty(string key)
+        Quaternion IPropertyBinder<Quaternion>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -118,7 +118,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        Vector3 IDataBinder<Vector3>.GetProperty(string key)
+        Vector3 IPropertyBinder<Vector3>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -134,7 +134,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        Vector2 IDataBinder<Vector2>.GetProperty(string key)
+        Vector2 IPropertyBinder<Vector2>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

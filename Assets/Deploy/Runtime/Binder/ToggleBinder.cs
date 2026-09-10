@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(Toggle))]
-    public sealed class ToggleBinder : DataBinder<Toggle>, IDataBinder<bool>, ICommandBinder<bool>, IUIEventBinder
+    public sealed class ToggleBinder : ComponentBinder<Toggle>, IPropertyBinder<bool>, ICommandBinder<bool>, IEventBinder
     {
         public enum eToggleProperty
         {
@@ -80,7 +80,7 @@ namespace Causeless3t.UI
             }
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -98,7 +98,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        public void InvokeMethod(string key, bool value)
+        public void InvokeMethod(string key, bool param)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -108,7 +108,7 @@ namespace Causeless3t.UI
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eToggleProperty.SetWithoutNotify: Target.SetIsOnWithoutNotify(value); break;
+                case eToggleProperty.SetWithoutNotify: Target.SetIsOnWithoutNotify(param); break;
             }
         }
 

@@ -9,13 +9,13 @@ namespace Causeless3t.UI
         bool HasKey(string key);
     }
  
-    public interface IDataBinder<T> 
+    public interface IPropertyBinder<T> 
     {
         void SetProperty(string key, T value);
         T GetProperty(string key);
     }
     
-    public interface IUIEventBinder
+    public interface IEventBinder
     {
         void AddListener(string key, Delegate action);
         void RemoveListener(string key, Delegate action);
@@ -23,7 +23,7 @@ namespace Causeless3t.UI
     
     public interface ICommandBinder<T>
     {
-        void InvokeMethod(string key, T target);
+        void InvokeMethod(string key, T param);
     }
 
     public interface IBinderManager

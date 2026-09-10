@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Causeless3t.UI
 {
-    public sealed class TransformBinder : DataBinder<Transform>, IDataBinder<Vector3>, IDataBinder<Quaternion>
+    public sealed class TransformBinder : ComponentBinder<Transform>, IPropertyBinder<Vector3>, IPropertyBinder<Quaternion>
     {
         public enum eTransformProperty
         {
@@ -69,7 +69,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        Quaternion IDataBinder<Quaternion>.GetProperty(string key)
+        Quaternion IPropertyBinder<Quaternion>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -84,7 +84,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        Vector3 IDataBinder<Vector3>.GetProperty(string key)
+        Vector3 IPropertyBinder<Vector3>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

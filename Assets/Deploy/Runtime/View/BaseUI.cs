@@ -102,7 +102,7 @@ namespace Causeless3t.UI
         /// <param name="value">프로퍼티의 값</param>
         public void BroadcastSetProperty<T>(string key, T value)
         {
-            foreach (var binder in _binderRegistry.FindAll<IDataBinder<T>>(key))
+            foreach (var binder in _binderRegistry.FindAll<IPropertyBinder<T>>(key))
             {
                 binder.SetProperty(key, value);
             }
@@ -115,7 +115,7 @@ namespace Causeless3t.UI
         /// <returns>Ui의 값</returns>
         public T BroadcastGetProperty<T>(string key)
         {
-            var binder = _binderRegistry.FindFirst<IDataBinder<T>>(key);
+            var binder = _binderRegistry.FindFirst<IPropertyBinder<T>>(key);
 
             return binder != null ? binder.GetProperty(key) : default;
         }
@@ -144,7 +144,7 @@ namespace Causeless3t.UI
         
         protected void RegisterUIEvent(string key, Delegate action)
         {
-            foreach (var binder in _binderRegistry.FindAll<IUIEventBinder>(key))
+            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
             {
                 binder.AddListener(key, action);
             }
@@ -152,7 +152,7 @@ namespace Causeless3t.UI
         
         protected void UnregisterUIEvent(string key, Delegate action)
         {
-            foreach (var binder in _binderRegistry.FindAll<IUIEventBinder>(key))
+            foreach (var binder in _binderRegistry.FindAll<IEventBinder>(key))
             {
                 binder.RemoveListener(key, action);
             }
@@ -208,7 +208,7 @@ namespace Causeless3t.UI
         
         private void RegisterUIEventsToBinder(IBinder binder)
         {
-            if (binder is not IUIEventBinder eventBinder)
+            if (binder is not IEventBinder eventBinder)
                 return;
 
             var bindings = UIEventBindingRegistry.GetBindings(GetType());

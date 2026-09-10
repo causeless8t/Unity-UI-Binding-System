@@ -8,8 +8,8 @@ using UnityEngine;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(TMP_InputField))]
-    public sealed class TMPInputFieldBinder : DataBinder<TMP_InputField>,
-        IDataBinder<string>, IDataBinder<bool>, IDataBinder<float>, IDataBinder<TMP_Text>, IDataBinder<int>, ICommandBinder<string>, IUIEventBinder
+    public sealed class TMPInputFieldBinder : ComponentBinder<TMP_InputField>,
+        IPropertyBinder<string>, IPropertyBinder<bool>, IPropertyBinder<float>, IPropertyBinder<TMP_Text>, IPropertyBinder<int>, ICommandBinder<string>, IEventBinder
     {
         public enum eTMP_InputFieldProperty
         {
@@ -153,7 +153,7 @@ namespace Causeless3t.UI
             }
         }
 
-        int IDataBinder<int>.GetProperty(string key)
+        int IPropertyBinder<int>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -170,7 +170,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
         
-        TMP_Text IDataBinder<TMP_Text>.GetProperty(string key)
+        TMP_Text IPropertyBinder<TMP_Text>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -185,7 +185,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -201,7 +201,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        float IDataBinder<float>.GetProperty(string key)
+        float IPropertyBinder<float>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -216,7 +216,7 @@ namespace Causeless3t.UI
             return default;
         }
 
-        string IDataBinder<string>.GetProperty(string key)
+        string IPropertyBinder<string>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -251,7 +251,7 @@ namespace Causeless3t.UI
             OnDeselectAction?.Invoke(Target, value);
         }
 
-        public void InvokeMethod(string key, string value)
+        public void InvokeMethod(string key, string param)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -261,7 +261,7 @@ namespace Causeless3t.UI
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eTMP_InputFieldProperty.SetWithoutNotify: Target.SetTextWithoutNotify(value); break;
+                case eTMP_InputFieldProperty.SetWithoutNotify: Target.SetTextWithoutNotify(param); break;
             }
         }
 

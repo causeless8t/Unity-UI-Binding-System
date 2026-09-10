@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(TMP_Dropdown))]
-    public sealed class DropdownBinder : DataBinder<TMP_Dropdown>, IDataBinder<bool>, IDataBinder<int>, IDataBinder<List<TMP_Dropdown.OptionData>>, ICommandBinder<int>, IUIEventBinder
+    public sealed class DropdownBinder : ComponentBinder<TMP_Dropdown>, IPropertyBinder<bool>, IPropertyBinder<int>, IPropertyBinder<List<TMP_Dropdown.OptionData>>, ICommandBinder<int>, IEventBinder
     {
         public enum eDropdownProperty
         {
@@ -80,7 +80,7 @@ namespace Causeless3t.UI
             }
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -109,7 +109,7 @@ namespace Causeless3t.UI
             }
         }
 
-        int IDataBinder<int>.GetProperty(string key)
+        int IPropertyBinder<int>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -138,7 +138,7 @@ namespace Causeless3t.UI
             }
         }
 
-        List<TMP_Dropdown.OptionData> IDataBinder<List<TMP_Dropdown.OptionData>>.GetProperty(string key)
+        List<TMP_Dropdown.OptionData> IPropertyBinder<List<TMP_Dropdown.OptionData>>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -153,7 +153,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        public void InvokeMethod(string key, int value)
+        public void InvokeMethod(string key, int param)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -163,7 +163,7 @@ namespace Causeless3t.UI
             if (Target.IsUnityNull()) return;
             switch (type)
             {
-                case eDropdownProperty.SetWithoutNotify: Target.SetValueWithoutNotify(value); break;
+                case eDropdownProperty.SetWithoutNotify: Target.SetValueWithoutNotify(param); break;
             }
         }
 

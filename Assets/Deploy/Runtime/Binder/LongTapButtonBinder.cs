@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(LongTapButton))]
-    public sealed class LongTapButtonBinder : DataBinder<LongTapButton>, IDataBinder<bool>, IUIEventBinder
+    public sealed class LongTapButtonBinder : ComponentBinder<LongTapButton>, IPropertyBinder<bool>, IEventBinder
     {
         public enum eLongTapButtonProperty
         {
@@ -81,7 +81,7 @@ namespace Causeless3t.UI
             }
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

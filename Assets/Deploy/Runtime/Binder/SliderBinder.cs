@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace Causeless3t.UI
 {
     [RequireComponent(typeof(Slider))]
-    public sealed class SliderBinder : DataBinder<Slider>, IDataBinder<float>, IDataBinder<bool>, IUIEventBinder
+    public sealed class SliderBinder : ComponentBinder<Slider>, IPropertyBinder<float>, IPropertyBinder<bool>, IEventBinder
     {
         public enum eSliderProperty
         {
@@ -94,7 +94,7 @@ namespace Causeless3t.UI
             }
         }
 
-        bool IDataBinder<bool>.GetProperty(string key)
+        bool IPropertyBinder<bool>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();
@@ -111,7 +111,7 @@ namespace Causeless3t.UI
 
         public override bool HasKey(string key) => _bindInfoDic?.ContainsKey(key) ?? false;
 
-        float IDataBinder<float>.GetProperty(string key)
+        float IPropertyBinder<float>.GetProperty(string key)
         {
             if (_bindInfoDic == null)
                 LoadData();

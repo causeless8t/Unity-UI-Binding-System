@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Causeless3t.UI
 { 
-    public abstract class DataBinder<T> : MonoBehaviour, IBinder, IDataBinder<T> where T : class
+    public abstract class ComponentBinder<T> : MonoBehaviour, IBinder, IPropertyBinder<T> where T : class
     {
         [SerializeField][Tooltip("기본 컴포넌트 Getter의 키")]
         protected string getterKey;
