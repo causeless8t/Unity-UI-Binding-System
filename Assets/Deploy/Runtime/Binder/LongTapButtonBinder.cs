@@ -24,7 +24,7 @@ namespace Causeless3t.UI
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private BindingMap<BindingType> _bindingMap; 
+        private readonly BindingMap<BindingType> _bindingMap = new(); 
         private event Action<LongTapButton> OnClickAction;
         private event Action<LongTapButton> OnLongTapAction;
         private event Action<LongTapButton> OnVeryLongTapAction;

@@ -2,11 +2,17 @@ using UnityEngine;
 
 namespace Causeless3t.UI
 { 
-    public abstract class ComponentBinder<T> : MonoBehaviour, IBinder, IPropertyBinder<T> where T : class
+    public abstract class BinderBase : MonoBehaviour, IBinder
     {
         [SerializeField][Tooltip("기본 컴포넌트 Getter의 키")]
         protected string getterKey;
-        
+
+        public abstract void Bind();
+        public abstract bool HasKey(string key);
+    }
+    
+    public abstract class ComponentBinder<T> : BinderBase, IPropertyBinder<T> where T : class
+    {
         /// <summary>
         /// 연결할 컴포넌트
         /// </summary>
@@ -31,7 +37,7 @@ namespace Causeless3t.UI
             Target = null;
         }
         
-        public void Bind()
+        public override void Bind()
         {
             var manager = GetComponentInParent<IBinderManager>(true);
 
@@ -60,7 +66,7 @@ namespace Causeless3t.UI
             return !string.IsNullOrEmpty(getterKey) && getterKey == key;
         }
 
-        public virtual bool HasKey(string key) => IsGetterKey(key);
+        public override bool HasKey(string key) => IsGetterKey(key);
 
         /// <summary>
         /// 컴포넌트에 Serialize된 정보를 내부 Dictionary로 옮겨담습니다.

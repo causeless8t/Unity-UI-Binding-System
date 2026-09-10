@@ -22,7 +22,7 @@ namespace Causeless3t.UI
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private BindingMap<BindingType> _bindingMap; 
+        private readonly BindingMap<BindingType> _bindingMap = new(); 
 
         protected override void Awake()
         {

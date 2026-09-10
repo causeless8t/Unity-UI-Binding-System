@@ -25,7 +25,7 @@ namespace Causeless3t.UI
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private BindingMap<BindingType> _bindingMap; 
+        private readonly BindingMap<BindingType> _bindingMap = new(); 
         private event Action<Toggle, bool> OnValueChangedAction;
 
         protected override void OnEnable()

@@ -33,7 +33,7 @@ namespace Causeless3t.UI
 
         [SerializeField]
         private List<BindInfo> _bindInfos = new();
-        private BindingMap<BindingType> _bindingMap; 
+        private readonly BindingMap<BindingType> _bindingMap = new(); 
         private event Action<TMP_InputField, string> OnValueChangedAction;
         private event Action<TMP_InputField, string> OnSubmitAction;
         private event Action<TMP_InputField, string> OnSelectAction;

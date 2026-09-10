@@ -28,7 +28,7 @@ namespace Causeless3t.Sample
         {
             UniTask.Create(async () =>
             {
-                await UniTask.WaitUntil(() => SampleScrollView.IsInitialized);
+                await UniTask.WaitUntil(() => SampleScrollView != null && SampleScrollView.IsInitialized);
                 for (int i = 0; i < 200; i++)
                     SampleScrollView.AddItem(new SampleItemModel() { Index = i });
             });
