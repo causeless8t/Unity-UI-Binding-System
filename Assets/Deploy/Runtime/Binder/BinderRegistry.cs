@@ -5,49 +5,57 @@ namespace Causeless3t.UI
 {
     internal sealed class BinderRegistry
     {
-        private readonly HashSet<IBinder> _binders = new();
-        private readonly Dictionary<(string key, Type type), IBinder> _cachedBinders = new();
+        private readonly List<IBinder> _binders = new();
+        private readonly HashSet<IBinder> _binderSet = new();
+        private readonly Dictionary<(string key, Type type), IBinder> _cachedBinder = new();
 
         public bool Register(IBinder binder)
         {
             if (binder == null)
                 return false;
+            
+            if (!_binderSet.Add(binder))
+                return false;
+            
+            _binders.Add(binder);
 
-            return _binders.Add(binder);
+            return true;
         }
         
         public bool Unregister(IBinder binder)
         {
             if (binder == null)
                 return false;
+            
+            if (!_binderSet.Remove(binder))
+                return false;
 
-            var removed = _binders.Remove(binder);
+            _binders.Remove(binder);
+            RemoveCache(binder);
 
-            if (removed)
-                RemoveCacheFor(binder);
-
-            return removed;
+            return true;
         }
 
         public void Clear()
         {
             _binders.Clear();
-            _cachedBinders.Clear();
+            _binderSet.Clear();
+            _cachedBinder.Clear();
         }
 
-        public T Find<T>(string key) where T : class
+        public T FindFirst<T>(string key) where T : class
         {
             if (string.IsNullOrEmpty(key))
                 return null;
             
             var cacheKey = (key, typeof(T));
 
-            if (_cachedBinders.TryGetValue(cacheKey, out var cachedBinder))
+            if (_cachedBinder.TryGetValue(cacheKey, out var cachedBinder))
             {
                 if (cachedBinder is T typedBinder)
                     return typedBinder;
 
-                _cachedBinders.Remove(cacheKey);
+                _cachedBinder.Remove(cacheKey);
             }
 
             foreach (var binder in _binders)
@@ -58,7 +66,7 @@ namespace Causeless3t.UI
                 if (binder is not T typedBinder)
                     continue;
                 
-                _cachedBinders[cacheKey] = binder;
+                _cachedBinder[cacheKey] = binder;
                 return typedBinder;
             }
 
@@ -80,18 +88,18 @@ namespace Causeless3t.UI
             }
         }
         
-        private void RemoveCacheFor(IBinder binder)
+        private void RemoveCache(IBinder binder)
         {
             var removeKeys = new List<(string key, Type type)>();
 
-            foreach (var pair in _cachedBinders)
+            foreach (var pair in _cachedBinder)
             {
                 if (ReferenceEquals(pair.Value, binder))
                     removeKeys.Add(pair.Key);
             }
 
             foreach (var key in removeKeys)
-                _cachedBinders.Remove(key);
+                _cachedBinder.Remove(key);
         }
     }
 }

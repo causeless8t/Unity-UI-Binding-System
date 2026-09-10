@@ -115,7 +115,7 @@ namespace Causeless3t.UI
         /// <returns>Ui의 값</returns>
         public T BroadcastGetProperty<T>(string key)
         {
-            var binder = _binderRegistry.Find<IDataBinder<T>>(key);
+            var binder = _binderRegistry.FindFirst<IDataBinder<T>>(key);
 
             return binder != null ? binder.GetProperty(key) : default;
         }
