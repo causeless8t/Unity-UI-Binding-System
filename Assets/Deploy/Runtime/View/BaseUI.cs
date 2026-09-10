@@ -20,9 +20,10 @@ namespace Causeless3t.UI
     {
         private readonly BinderRegistry _binderRegistry = new();
 
+        private bool _isUIEventsRegistered;
+        
         public bool IsInitializedBinder { get; private set; }
-
-
+        
         public RectTransform RectTransform => this.transform as RectTransform;
         /// <summary>
         /// 씬 자체에 이미 있는 Ui인지 여부
@@ -91,6 +92,8 @@ namespace Causeless3t.UI
 
         #endregion
         
+        #region Property Binding
+        
         /// <summary>
         /// 프로퍼티의 Setter에서 호출하여 변경사항을 키와 연결된 Ui에 적용합니다.  
         /// </summary>
@@ -114,6 +117,10 @@ namespace Causeless3t.UI
             return binder != null ? binder.GetProperty(key) : default;
         }
         
+        #endregion
+
+        #region Command Binding
+        
         /// <summary>
         /// 키와 연결된 Ui의 메소드를 호출합니다.
         /// </summary>
@@ -125,6 +132,10 @@ namespace Causeless3t.UI
             _binderRegistry.Find<ICommandBinder<T>>(key)?.InvokeMethod(key, param);
         }
         
+        #endregion
+        
+        #region Event Binding
+        
         protected void RegisterUIEvent(string key, Delegate action)
         {
             _binderRegistry.Find<IUIEventBinder>(key)?.AddListener(key, action);
@@ -134,37 +145,17 @@ namespace Causeless3t.UI
         {
             _binderRegistry.Find<IUIEventBinder>(key)?.RemoveListener(key, action);
         }
-
-        /// <summary>
-        /// 바인더를 이 Ui의 리스너로 등록합니다.
-        /// </summary>
-        /// <param name="dataBinder">등록할 바인더</param>
-        public void RegisterBinder(IBinder binder)
-        {
-            _binderRegistry.Register(binder);
-        }
-
-        /// <summary>
-        /// 하위에 있는 Binder 요소를 탐색한 후 바인딩한다.
-        /// 동적으로 생성되는 객체의 경우 따로 호출해줘야 정상적으로 Binder들이 등록됩니다.
-        /// </summary>
-        public void SearchBinders()
-        { 
-            _binderRegistry.Clear();
-            var binders = GetComponentsInChildren<IBinder>(true);
-
-            
-            foreach (var binder in binders)
-                binder.Bind(); // 하위로부터 바인딩하는 형태로 만든 이유는 부모가 active되지 않을 경우 등록되지 않는 경우가 생기기 때문
-
-            IsInitializedBinder = true;
-        }
-
+        
         /// <summary>
         /// UI 이벤트의 콜백을 등록하기 위한 메소드
         /// </summary>
         public void RegisterUIEvents()
         {
+            if (_isUIEventsRegistered)
+                return;
+
+            _isUIEventsRegistered = true;
+
             SetUIEventsRegistered(true);
         }
 
@@ -173,7 +164,12 @@ namespace Causeless3t.UI
         /// </summary>
         public void UnRegisterUIEvents()
         {
+            if (!_isUIEventsRegistered)
+                return;
+
             SetUIEventsRegistered(false);
+
+            _isUIEventsRegistered = false;
         }
         
         private void SetUIEventsRegistered(bool register)
@@ -193,10 +189,83 @@ namespace Causeless3t.UI
                 }
                 catch (TargetParameterCountException)
                 {
-                    Debug.LogError(
-                        $"Invalid UI event binding: {binding.Method.Name}");
+                    Debug.LogError($"Invalid UI event binding: {binding.Method.Name}");
                 }
             }
         }
+        
+        private void RegisterUIEventsToBinder(IBinder binder)
+        {
+            if (binder is not IUIEventBinder eventBinder)
+                return;
+
+            var bindings = UIEventBindingRegistry.GetBindings(GetType());
+
+            foreach (var binding in bindings)
+            {
+                if (!binder.HasKey(binding.Key))
+                    continue;
+
+                try
+                {
+                    var callback = Delegate.CreateDelegate(
+                        binding.DelegateType,
+                        this,
+                        binding.Method);
+
+                    eventBinder.AddListener(binding.Key, callback);
+                }
+                catch (ArgumentException e)
+                {
+                    Debug.LogError(
+                        $"Failed to bind UI event '{binding.Key}' " +
+                        $"to {GetType().Name}.{binding.Method.Name}\n{e.Message}");
+                }
+            }
+        }
+        
+        #endregion
+
+        #region Binder Management
+        
+        /// <summary>
+        /// 바인더를 이 Ui의 리스너로 등록합니다.
+        /// </summary>
+        /// <param name="dataBinder">등록할 바인더</param>
+        public void RegisterBinder(IBinder binder)
+        {
+            if (!_binderRegistry.Register(binder))
+                return;
+
+            // OnEnable 이후 동적으로 생성된 Binder라면
+            // 해당 Binder의 이벤트도 즉시 등록한다.
+            if (_isUIEventsRegistered)
+            {
+                RegisterUIEventsToBinder(binder);
+            }
+        }
+        
+        public void UnregisterBinder(IBinder binder)
+        {
+            _binderRegistry.Unregister(binder);
+        }
+
+        /// <summary>
+        /// 하위에 있는 Binder 요소를 탐색한 후 바인딩한다.
+        /// 동적으로 생성되는 객체의 경우 따로 호출해줘야 정상적으로 Binder들이 등록됩니다.
+        /// </summary>
+        public void SearchBinders()
+        { 
+            _binderRegistry.Clear();
+            var binders = GetComponentsInChildren<IBinder>(true);
+
+            
+            foreach (var binder in binders)
+                binder.Bind(); // 하위로부터 바인딩하는 형태로 만든 이유는 부모가 active되지 않을 경우 등록되지 않는 경우가 생기기 때문
+
+            IsInitializedBinder = true;
+        }
+        
+        #endregion
     }
 }

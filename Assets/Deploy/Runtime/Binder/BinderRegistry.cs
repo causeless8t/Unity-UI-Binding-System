@@ -8,12 +8,25 @@ namespace Causeless3t.UI
         private readonly HashSet<IBinder> _binders = new();
         private readonly Dictionary<(string key, Type type), IBinder> _cachedBinders = new();
 
-        public void Register(IBinder binder)
+        public bool Register(IBinder binder)
         {
             if (binder == null)
-                return;
+                return false;
 
-            _binders.Add(binder);
+            return _binders.Add(binder);
+        }
+        
+        public bool Unregister(IBinder binder)
+        {
+            if (binder == null)
+                return false;
+
+            var removed = _binders.Remove(binder);
+
+            if (removed)
+                RemoveCacheFor(binder);
+
+            return removed;
         }
 
         public void Clear()
@@ -46,6 +59,20 @@ namespace Causeless3t.UI
             }
 
             return null;
+        }
+        
+        private void RemoveCacheFor(IBinder binder)
+        {
+            var removeKeys = new List<(string key, Type type)>();
+
+            foreach (var pair in _cachedBinders)
+            {
+                if (ReferenceEquals(pair.Value, binder))
+                    removeKeys.Add(pair.Key);
+            }
+
+            foreach (var key in removeKeys)
+                _cachedBinders.Remove(key);
         }
     }
 }

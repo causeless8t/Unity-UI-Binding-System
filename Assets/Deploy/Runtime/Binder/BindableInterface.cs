@@ -29,6 +29,7 @@ namespace Causeless3t.UI
     public interface IBinderManager
     {
         void RegisterBinder(IBinder dataBinder);
+        void UnregisterBinder(IBinder binder);
         void SearchBinders();
         void RegisterUIEvents();
         void UnRegisterUIEvents();
