@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- Instantiate 및 비활성 자식 탐색 시 Binder의 Awake 전에 등록되어 UI 이벤트 연결이 누락되는 문제 수정
+- ComponentBinder의 Target과 Key lookup을 최초 Awake/Bind 시 한 번만 초기화
+
 ## [1.1.0] - 2026-09-11
 ### Added
 - BaseUIEditor

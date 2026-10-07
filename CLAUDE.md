@@ -234,7 +234,8 @@ private struct BindInfo
 
 Editor Tool이 `_bindings`, `Key`, `Type` 구조를 사용하므로 특별한 이유 없이 필드명을 변경하지 마세요.
 
-Binding 데이터는 Awake 단계에서 lookup 구조로 변환하는 것을 우선합니다.
+Binding 데이터는 `Awake()` 또는 최초 `Bind()` 중 먼저 호출되는 시점에 한 번만 lookup 구조로 변환합니다.
+부모 `BaseUI.Awake()`가 자식 Binder의 `Awake()`보다 먼저 `Bind()`를 호출할 수 있으므로, Registry 등록 전에 Target과 Binding lookup 초기화를 보장해야 합니다.
 
 Binding 호출 시마다 serialized list를 순회하지 마세요.
 

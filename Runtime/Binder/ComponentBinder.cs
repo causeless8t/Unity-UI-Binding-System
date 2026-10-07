@@ -19,11 +19,11 @@ namespace Causeless3t.UI
         protected T Target;
         
         private IBinderManager _binderManager;
+        private bool _isInitialized;
 
         protected virtual void Awake()
         {
-            Target = FindTarget();
-            BuildBindings();
+            EnsureInitialized();
         }
 
         protected virtual void OnEnable()
@@ -39,6 +39,10 @@ namespace Causeless3t.UI
         
         public override void Bind()
         {
+            // 부모 BaseUI의 Awake에서 자식 Awake보다 먼저 호출될 수 있다.
+            // Registry에 노출하기 전에 Target과 Key lookup을 준비한다.
+            EnsureInitialized();
+
             var manager = GetComponentInParent<IBinderManager>(true);
 
             if (!ReferenceEquals(_binderManager, manager))
@@ -50,6 +54,16 @@ namespace Causeless3t.UI
             _binderManager?.RegisterBinder(this);
         }
         
+        private void EnsureInitialized()
+        {
+            if (_isInitialized)
+                return;
+
+            Target = FindTarget();
+            BuildBindings();
+            _isInitialized = true;
+        }
+
         private void Unbind()
         {
             if (_binderManager == null)

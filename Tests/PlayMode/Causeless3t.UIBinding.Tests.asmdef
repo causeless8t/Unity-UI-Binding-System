@@ -1,0 +1,7 @@
+{
+    "name": "Causeless3t.UIBinding.Tests",
+    "references": ["Causeless3t.UIBinding", "Unity.TextMeshPro", "Unity.ugui"],
+    "includePlatforms": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "autoReferenced": false
+}
